@@ -12,6 +12,9 @@ var express = require('express');
 // for more info, see: https://www.npmjs.com/package/cfenv
 var cfenv = require('cfenv');
 
+//hyperledger SDK
+var hfc = require('hfc');
+
 // create a new express server
 var app = express();
 
