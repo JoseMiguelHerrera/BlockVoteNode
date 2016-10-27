@@ -3,3 +3,7 @@
 - Go through registration process 
 - Go through enrollment process 
 - invoke chaincode transactions (put in values) ie. list your favourite food! 
+
+
+**Resource**
+ - github.com/hyperledger/fabric/sdk/node/lib/hfc.js 
