@@ -7,9 +7,13 @@
 - Present the results of the referendum 
 - First phase: automatic registration without registrar validity
 
-**TODO/Milestones**
+**Milestones**
 - [ ] Register and enroll voters
 - [ ] Serve results back to voters  
+
+**TODO**
+- [ ] Create front end 
+- [X] Port skeleton code from examples 
 
 **Resource**
  - Read this to see the methods in HFC: github.com/hyperledger/fabric/sdk/node/lib/hfc.js
