@@ -126,10 +126,10 @@ function enrollAdmin() {
         });
     }
 
-    console.log("\n\n------------- peers and caserver information: -------------");
-    console.log(chain.getPeers());
-    console.log(chain.getMemberServices());
-    console.log('-----------------------------------------------------------\n\n');
+    // console.log("\n\n------------- peers and caserver information: -------------");
+    // console.log(chain.getPeers());
+    // console.log(chain.getMemberServices());
+    // console.log('-----------------------------------------------------------\n\n');
 
     if (DEV_MODE) {
         chain.setDevMode(true);
@@ -140,20 +140,30 @@ function enrollAdmin() {
         chain.setDeployWaitTime(120);
     }
 
-
-    console.log("Enrolling the admin... ");
+    //TODO: Register our own admin! 
+    // var SuperAdmin = new Member(registrationRequest, chain);
+    // console.log(SuperAdmin);
+    // console.log("Enrolling the admin... ");
     //enroll the admin 
     chain.enroll(users[0].username, users[0].secret, function(err, user) {
         if (err) throw Error("\nERROR: failed to enroll admin : %s", err);
         // Set this user as the chain's registrar which is authorized to register other users.
-        chain.setRegistrar(users[0].username);
+        /*
+            Andrei: What can the registrar do? 
+         */
+        admin = user;
+        chain.setRegistrar(admin);
+        // console.log(admin)
         console.log("Admin is now enrolled.")
 
 
-        admin = user;
-        deploy();
+        registerNewUser();
+        // deploy();
+       
     });
 }
+
+
 //admin deploys the chaincode 
 function deploy() {
 
@@ -179,17 +189,72 @@ function deploy() {
         // Set the testChaincodeID for subsequent tests
         chaincodeID = results.chaincodeID;
         console.log("Chaincode ID: " + chaincodeID);
+        registerNewUser();
+
     });
     tx.on('error', function(error) {
         console.log("Failed to deploy chaincode: request=%j, error=%k", deployRequest, error);
         process.exit(1);
     });
 
+}
+
+var registrationRequest = {
+    enrollmentID: "Voter4",
+    name: "Cat",
+    role: "client",
+    account: "group1", //important variable
+    affiliation: "00001" //important variable 
+}
+
+function registerNewUser() {
+
+    /*
+        trace the registration sequence 
+        Sequence:
+            - the chain determines if it should make a new member for this case
+            - the chain makes the new/already present user will register itself 
+            - the member passes the registration to the memberservices 
+            - the membership services asks for the registration request and the admin of this chain
+            - TODO: read on the security jargon implemented in the membership services constructor
+            - membership services requires registrar to be set before registering new users 
+            - membership services uses some crypto,grpc , other components to create a token for the user 
+            - this token is set to the new member 
+     */
+    console.log("Now registering: " + registrationRequest.name);
+    chain.register(registrationRequest, function(err, enrollmentSecret) {
+        if (err) {
+            throw Error("Failed to register " + registrationRequest.name + ": " + err);
+        }
+        console.log("Succesfully registered " + registrationRequest.name);
+        registrationRequest.enrollmentSecret = enrollmentSecret;
+        //At this point, 'registration' only enables this person to enroll
+        enrollNewUser();
+    });
+
 
 }
 
-function testProgram() {
+function enrollNewUser() {
+    /*
+        trace the enrollment sequence 
+        TODO: Why didn't the role, account and affiliation from registrationRequest 
+                not get recorded on the member? 
+        Sequence:
+            - 
+     */
+    console.log("Now enrolling: " + registrationRequest.name);
+    chain.enroll(registrationRequest.name, registrationRequest.enrollmentSecret,
+        function(err, member) {
+            if (err) {
+                throw Error("Failed to enroll " + registrationRequest.name + ": " + err);
+            }
 
+            //A member object is returned 
+            // console.log(member);
+            console.log("Succesfully enrolled " + registrationRequest.name);
+        }
+    );
 }
 
 //*******************************HFC SDK SETUP DONE ******************************
@@ -210,10 +275,10 @@ app.use(express.static(__dirname + '/public'));
 //Setup the APIs for communication between front end and back end 
 
 //functions to interface with IBM Blockchain
-function registerNewUser() {
-    //admin registers the new user
+// function registerNewUser() {
+//     //admin registers the new user
 
-}
+// }
 
 function enrollUser() {
     //admin enrolls the user
