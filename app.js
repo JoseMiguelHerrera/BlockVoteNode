@@ -280,7 +280,7 @@ function enrollNewUser() {
             console.log(member.getRoles());
 
             //Andrei: Somehow members are not recorded in the chain?
-            console.log(chain.members)
+            console.log(chain.toString());
             //User invokes the chaincode  
     
             //User queries the chaincode 
