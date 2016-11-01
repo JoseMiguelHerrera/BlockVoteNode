@@ -9,6 +9,7 @@
 
 **Milestones**
 - [ ] Register and enroll voters
+- [X] Register and enroll hardcoded voters
 - [ ] Serve results back to voters  
 
 **TODO**

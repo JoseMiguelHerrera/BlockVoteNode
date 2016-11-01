@@ -140,10 +140,9 @@ function enrollAdmin() {
         chain.setDeployWaitTime(120);
     }
 
-    //TODO: Register our own admin! 
+    //TODO: Register and enroll our own admin, instead of the hardcoded one in membersrvc.yaml! 
     // var SuperAdmin = new Member(registrationRequest, chain);
     // console.log(SuperAdmin);
-    // console.log("Enrolling the admin... ");
     //enroll the admin 
     console.log("Enrolling admin");
     chain.enroll(users[0].username, users[0].secret, function(err, user) {
@@ -157,6 +156,7 @@ function enrollAdmin() {
         // console.log(admin)
         console.log("Admin is now enrolled.")
 
+        //TODO: have some kind of delay here as registering a new user won't work if done right away?
 
         registerNewUser();
         // deploy();
@@ -200,20 +200,31 @@ function deploy() {
 
 }
 
-// var registrationRequest = {
-//     enrollmentID: "Tuta",
-//     name: "Buizass2",
-//     role: "client",
-//     account: "group1", //important variable
-//     affiliation: "00001" //important variable 
-// }
+/*
+     PROBLEMS:
+        - it is hard to create new users, the membership services is shoddy and does not respond, resulting to erros on my side
+        - You may find that you have to rerun the registration and enrollment sequence for a user serveral times before it is accepted
+        - affiliation and account for each user: https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
+        - it seems like we cannot use events that are built in fabric using the IBM Blockchain 
+            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/24
 
+ */
+
+/*
+    Notes:
+    - It seems like to change the role other than 'client', we need some kind of special permission from the admin 
+    - other values for affiliation and account are not possible at the moment https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+        - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
+
+ */
+var enrollmentID = "Guittara";
 var registrationRequest = {
-    enrollmentID: "LosPerros", //recorded under 'name' of the Member, this is the only parameter set in member object 
-    name: "ElGato",  //this does not get used at all 
-    roles: "Voter",
-    account: "group1",
-    affiliation: "00001"
+    enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
+    name: enrollmentID+ "Name",  //this does not get used at all in chain object or member services 
+    roles: "validator", //this is role in Member Services, choices are ["client","peer","validator","auditor"]
+    account: "group1", //this affiliation in Member Services 
+    affiliation: "00001"  //this is affiliationRole in Member Services
 };
 
 function registerNewUser() {
@@ -230,11 +241,13 @@ function registerNewUser() {
             - membership services uses some crypto,grpc , other components to create a token for the user 
             - this token is set to the new member as the enrollmentID 
 
-            - Does member services record the new member ? 
-                - it seems to record id, roles, accound and affiliation
+            - Does member services record the new member ? yes it does 
+                - it seems to record id, roles, account and affiliation
                 - the problem is our chain does not record these info 
+            - only the enrollmentID is used when creating the new member object inside HFC
      */
     console.log("Now registering: " + registrationRequest.name);
+
 
     chain.register(registrationRequest, function(err, enrollmentSecret) {
         if (err) {
@@ -244,7 +257,9 @@ function registerNewUser() {
         registrationRequest.enrollmentSecret = enrollmentSecret;
         //At this point, 'registration' only enables this person to enroll
 
+        //TODO: have some kind of delay here as enrolling the user won't work if done right away?
         enrollNewUser();
+
     });
 
 }
@@ -266,21 +281,24 @@ function enrollNewUser() {
 
             /*
                 TODO:
-                    - get the new registered user to cast his vote 
                     - utilize the roles, affiliation and account 
-             
-                    - only the enrollmentID is used when creating the new member object
+                    - get the new registered user to cast his vote 
+                    - 
                     - 
              */
             //A member object is returned 
             console.log(member);
+
+             //Note: Members are not saved in the chain object 
+            //Should we record the missed members and its parameters inside this chain object?
+            
             member.setRoles(["Voter", "Citizen"]);
-            console.log("Succesfully enrolled " + registrationRequest.name);
 
-            console.log(member.getRoles());
+            console.log(member.toString());
 
-            //Andrei: Somehow members are not recorded in the chain?
-            console.log(chain.toString());
+           
+      
+
             //User invokes the chaincode  
     
             //User queries the chaincode 
