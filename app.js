@@ -145,6 +145,7 @@ function enrollAdmin() {
     // console.log(SuperAdmin);
     // console.log("Enrolling the admin... ");
     //enroll the admin 
+    console.log("Enrolling admin");
     chain.enroll(users[0].username, users[0].secret, function(err, user) {
         if (err) throw Error("\nERROR: failed to enroll admin : %s", err);
         // Set this user as the chain's registrar which is authorized to register other users.
@@ -159,7 +160,7 @@ function enrollAdmin() {
 
         registerNewUser();
         // deploy();
-       
+
     });
 }
 
@@ -189,7 +190,7 @@ function deploy() {
         // Set the testChaincodeID for subsequent tests
         chaincodeID = results.chaincodeID;
         console.log("Chaincode ID: " + chaincodeID);
-        registerNewUser();
+        //registerNewUser();
 
     });
     tx.on('error', function(error) {
@@ -199,13 +200,21 @@ function deploy() {
 
 }
 
+// var registrationRequest = {
+//     enrollmentID: "Tuta",
+//     name: "Buizass2",
+//     role: "client",
+//     account: "group1", //important variable
+//     affiliation: "00001" //important variable 
+// }
+
 var registrationRequest = {
-    enrollmentID: "Voter4",
-    name: "Cat",
-    role: "client",
-    account: "group1", //important variable
-    affiliation: "00001" //important variable 
-}
+    enrollmentID: "LosPerros", //recorded under 'name' of the Member, this is the only parameter set in member object 
+    name: "ElGato",  //this does not get used at all 
+    roles: "Voter",
+    account: "group1",
+    affiliation: "00001"
+};
 
 function registerNewUser() {
 
@@ -213,15 +222,20 @@ function registerNewUser() {
         trace the registration sequence 
         Sequence:
             - the chain determines if it should make a new member for this case
-            - the chain makes the new/already present user will register itself 
+            - the chain makes the new/already present user register itself 
             - the member passes the registration to the memberservices 
             - the membership services asks for the registration request and the admin of this chain
             - TODO: read on the security jargon implemented in the membership services constructor
             - membership services requires registrar to be set before registering new users 
             - membership services uses some crypto,grpc , other components to create a token for the user 
-            - this token is set to the new member 
+            - this token is set to the new member as the enrollmentID 
+
+            - Does member services record the new member ? 
+                - it seems to record id, roles, accound and affiliation
+                - the problem is our chain does not record these info 
      */
     console.log("Now registering: " + registrationRequest.name);
+
     chain.register(registrationRequest, function(err, enrollmentSecret) {
         if (err) {
             throw Error("Failed to register " + registrationRequest.name + ": " + err);
@@ -229,9 +243,9 @@ function registerNewUser() {
         console.log("Succesfully registered " + registrationRequest.name);
         registrationRequest.enrollmentSecret = enrollmentSecret;
         //At this point, 'registration' only enables this person to enroll
+
         enrollNewUser();
     });
-
 
 }
 
@@ -244,15 +258,32 @@ function enrollNewUser() {
             - 
      */
     console.log("Now enrolling: " + registrationRequest.name);
-    chain.enroll(registrationRequest.name, registrationRequest.enrollmentSecret,
+    chain.enroll(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret,
         function(err, member) {
             if (err) {
                 throw Error("Failed to enroll " + registrationRequest.name + ": " + err);
             }
 
+            /*
+                TODO:
+                    - get the new registered user to cast his vote 
+                    - utilize the roles, affiliation and account 
+             
+                    - only the enrollmentID is used when creating the new member object
+                    - 
+             */
             //A member object is returned 
-            // console.log(member);
+            console.log(member);
+            member.setRoles(["Voter", "Citizen"]);
             console.log("Succesfully enrolled " + registrationRequest.name);
+
+            console.log(member.getRoles());
+
+            //Andrei: Somehow members are not recorded in the chain?
+            console.log(chain.members)
+            //User invokes the chaincode  
+    
+            //User queries the chaincode 
         }
     );
 }
