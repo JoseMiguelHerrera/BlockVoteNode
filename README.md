@@ -5,7 +5,6 @@
 - Enter each participant's vote on the Blockchain
 - Count the votes in the Blockchain
 - Present the results of the referendum 
-- First phase: automatic registration without registrar validity
 
 **Milestones**
 - [ ] Register and enroll voters
