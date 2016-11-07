@@ -23,7 +23,7 @@ process.env['GRPC_SSL_CIPHER_SUITES'] = 'ECDHE-RSA-AES128-GCM-SHA256:' +
     'ECDHE-ECDSA-AES128-SHA256:' +
     'ECDHE-ECDSA-AES256-SHA384:' +
     'ECDHE-ECDSA-AES256-GCM-SHA384';
-//*******************************HFC SDK SETUP START ******************************
+//*******************************Bluemix SETUP START ******************************
 
 // Create a client blockchin.
 var chain = hfc.newChain("BallotChain")
@@ -98,7 +98,9 @@ function copyCertificate() {
         enrollAdmin();
     }, 1000);
 }
-
+//*******************************Bluemix SETUP DONE ******************************
+//
+//*******************************
 
 var network_id = Object.keys(network.credentials.ca);
 var uuid = network_id[0].substring(0, 8);
@@ -195,6 +197,9 @@ function enrollAdmin() {
 
         registerNewUser(registrationRequest);
         registerNewUser(registrationRequest2);
+        
+        // enrollNewUser("Tie", "GrXPYbJwErvf");
+        // enrollNewUser("Pants", "CmuRgpqUDlhK");
     });
 }
 var chaincodeID;
@@ -361,7 +366,7 @@ function queryChainCode(member) {
     });
 }
 
-//*******************************HFC SDK SETUP DONE ******************************
+
 
 //*******************************WEB APP SERVICE START ******************************
 // create a new express server
