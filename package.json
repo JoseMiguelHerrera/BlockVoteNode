@@ -8,7 +8,7 @@
 	"dependencies": {
 		"express": "4.13.x",
 		"cfenv": "1.0.x",
-		"hfc":"0.5.4"
+		"hfc":"0.5.3"
 	},
 	"repository": {},
 	"engines": {

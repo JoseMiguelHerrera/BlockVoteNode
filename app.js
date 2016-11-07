@@ -1,7 +1,7 @@
 /*eslint-env node*/
 
 var express = require('express');
-
+var util = require('util');
 // cfenv provides access to your Cloud Foundry environment
 // for more info, see: https://www.npmjs.com/package/cfenv
 // var cfenv = require('cfenv');
@@ -14,7 +14,6 @@ const https = require('https');
 
 var USE_BLOCKVOTE_CC = false;
 var DEV_MODE = false;
-//Andrei: What are these? 
 // Creating an environment variable for ciphersuites
 process.env['GRPC_SSL_CIPHER_SUITES'] = 'ECDHE-RSA-AES128-GCM-SHA256:' +
     'ECDHE-RSA-AES128-SHA256:' +
@@ -137,7 +136,7 @@ function enrollAdmin() {
         //Deploy will not take long as the chain should already be running
         chain.setDeployWaitTime(10);
     } else {
-        chain.setDeployWaitTime(120);
+        // chain.setDeployWaitTime(120);
     }
 
     //TODO: Register and enroll our own admin, instead of the hardcoded one in membersrvc.yaml! 
@@ -159,52 +158,25 @@ function enrollAdmin() {
         //TODO: have some kind of delay here as registering a new user won't work if done right away?
 
         registerNewUser();
-        // deploy();
-
     });
 }
-
-
-//admin deploys the chaincode 
-function deploy() {
-
-    console.log("Deploying chaincode ...");
-    // Construct the deploy request
-    var deployRequest = {
-        // Function to trigger
-        fcn: "init",
-        // Arguments to the initializing function
-        args: ["a", "100", "b", "200"]
-    };
-    if (USE_BLOCKVOTE_CC) {
-        deployRequest.chaincodePath = "BlockVoteChainCode/start";
-    } else {
-        deployRequest.chaincodePath = "chaincode_example02";
-    }
-
-    // Issue the deploy request and listen for events
-    var tx = admin.deploy(deployRequest);
-    tx.on('complete', function(results) {
-        // Deploy request completed successfully
-        console.log("deploy complete; results: %j", results);
-        // Set the testChaincodeID for subsequent tests
-        chaincodeID = results.chaincodeID;
-        console.log("Chaincode ID: " + chaincodeID);
-        //registerNewUser();
-
-    });
-    tx.on('error', function(error) {
-        console.log("Failed to deploy chaincode: request=%j, error=%k", deployRequest, error);
-        process.exit(1);
-    });
-
+var chaincodeID;
+if (USE_BLOCKVOTE_CC) {
+    //Our chaincode
+    chaincodeID = "ce465d9c6aecfe7b4700040f421321902eff87c7ad99ebac75353307aaa334b1";
+} else {
+    //sample chaincoide ID 
+    chaincodeID = "a569251165110822059e16567616f7326c085275469a7afbdd7789e4d81c44ce";
 }
+
 
 /*
      PROBLEMS:
         - it is hard to create new users, the membership services is shoddy and does not respond, resulting to erros on my side
         - You may find that you have to rerun the registration and enrollment sequence for a user serveral times before it is accepted
-        - affiliation and account for each user: https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+        
+
+        - affiliation and account NOTES for each user: https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
             - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
         - it seems like we cannot use events that are built in fabric using the IBM Blockchain 
             - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/24
@@ -218,13 +190,13 @@ function deploy() {
         - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
 
  */
-var enrollmentID = "Guittara";
+var enrollmentID = "Shirt";
 var registrationRequest = {
     enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
-    name: enrollmentID+ "Name",  //this does not get used at all in chain object or member services 
+    name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
     roles: "validator", //this is role in Member Services, choices are ["client","peer","validator","auditor"]
     account: "group1", //this affiliation in Member Services 
-    affiliation: "00001"  //this is affiliationRole in Member Services
+    affiliation: "00001" //this is affiliationRole in Member Services
 };
 
 function registerNewUser() {
@@ -264,6 +236,8 @@ function registerNewUser() {
 
 }
 
+var MemberList = [];
+
 function enrollNewUser() {
     /*
         trace the enrollment sequence 
@@ -279,31 +253,110 @@ function enrollNewUser() {
                 throw Error("Failed to enroll " + registrationRequest.name + ": " + err);
             }
 
-            /*
-                TODO:
-                    - utilize the roles, affiliation and account 
-                    - get the new registered user to cast his vote 
-                    - 
-                    - 
-             */
+            console.log("Succesfully enrolled " + registrationRequest.name);
+
             //A member object is returned 
-            console.log(member);
 
-             //Note: Members are not saved in the chain object 
-            //Should we record the missed members and its parameters inside this chain object?
-            
-            member.setRoles(["Voter", "Citizen"]);
+            //Note: Members are not saved in the chain object here in server side 
+            //Andrei: Should we record the missed members and its parameters inside this chain object?
 
-            console.log(member.toString());
+            // member.setRoles(["Voter", "Citizen"]);
 
-           
-      
 
+
+            /*
+            TODO:
+                - utilize the roles, affiliation and account 
+                - get the new registered user to cast his vote 
+                - 
+                - 
+            */
+
+            MemberList.push(member);
+            queryChainCode(member);
             //User invokes the chaincode  
-    
+            // invokeChainCode(member);
+
             //User queries the chaincode 
         }
     );
+}
+
+function invokeChainCode(member) {
+    console.log("invoking chaincode...");
+    var invokeRequest;
+
+    if (USE_BLOCKVOTE_CC) {
+        invokeRequest = {
+            chaincodeID: chaincodeID,
+            fcn: "write",
+            args: ["Brexit", "no"]
+        };
+    } else {
+        invokeRequest = {
+            chaincodeID: chaincodeID,
+            fcn: "invoke",
+            args: ["a", "b", "1"]
+        };
+    }
+
+    // Trigger the invoke transaction
+    var invokeTx = member.invoke(invokeRequest);
+
+    // Print the invoke results
+    invokeTx.on('submitted', function(results) {
+        // Invoke transaction submitted successfully
+        console.log(util.format("\nSuccessfully submitted chaincode invoke transaction: request=%j, response=%j", invokeRequest, results));
+    });
+    invokeTx.on('complete', function(results) {
+        // Invoke transaction completed successfully
+        console.log(util.format("\nSuccessfully completed chaincode invoke transaction: request=%j, response=%j", invokeRequest, results));
+        queryChainCode(member);
+    });
+    invokeTx.on('error', function(err) {
+        // Invoke transaction submission failed
+        console.log(util.format("\nFailed to submit chaincode invoke transaction: request=%j, error=%j", invokeRequest, err));
+    });
+
+}
+
+function queryChainCode(member) {
+    console.log("querying chaincode...");
+    // Construct the query request
+    var queryRequest;
+    if (USE_BLOCKVOTE_CC) {
+        queryRequest = {
+            // Name (hash) required for query
+            chaincodeID: chaincodeID,
+            // Function to trigger
+            fcn: "read",
+            // Existing state variable to retrieve
+            args: ["Brexit"]
+        }
+    } else {
+        queryRequest = {
+            // Name (hash) required for query
+            chaincodeID: chaincodeID,
+            // Function to trigger
+            fcn: "query",
+            // Existing state variable to retrieve
+            args: ["a"]
+        }
+    }
+
+
+    // Trigger the query transaction
+    var queryTx = member.query(queryRequest);
+
+    // Print the query results
+    queryTx.on('complete', function(results) {
+        // Query completed successfully
+        console.log("\nSuccessfully queried  chaincode function: request=%j, value=%s", queryRequest, results.result.toString());
+    });
+    queryTx.on('error', function(err) {
+        // Query failed
+        console.log("\nFailed to query chaincode, function: request=%j, error=%j", queryRequest, err);
+    });
 }
 
 //*******************************HFC SDK SETUP DONE ******************************
@@ -317,9 +370,9 @@ app.use(express.static(__dirname + '/public'));
 
 
 
-// app.listen(port, hostname, function() {
-//     console.log(`Server running at http://${hostname}:${port}/`);
-// });
+app.listen(port, hostname, function() {
+    console.log(`Server running at http://${hostname}:${port}/`);
+});
 
 //Setup the APIs for communication between front end and back end 
 
