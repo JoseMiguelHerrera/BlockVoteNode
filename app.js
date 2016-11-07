@@ -12,7 +12,7 @@ var hfc = require('hfc');
 var fs = require('fs');
 const https = require('https');
 
-var USE_BLOCKVOTE_CC = false;
+var USE_BLOCKVOTE_CC = true;
 var DEV_MODE = false;
 // Creating an environment variable for ciphersuites
 process.env['GRPC_SSL_CIPHER_SUITES'] = 'ECDHE-RSA-AES128-GCM-SHA256:' +
@@ -107,6 +107,42 @@ var uuid = network_id[0].substring(0, 8);
 chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
 
 var admin;
+/*
+     PROBLEMS:       
+
+        - affiliation and account NOTES for each user: https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
+        - it seems like we cannot use events that are built in fabric using the IBM Blockchain 
+            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/24
+
+ */
+
+/*
+    Notes:
+    - other values for affiliation and account are not possible at the moment https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+        - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
+
+ */
+var enrollmentID = "Tie";
+var registrationRequest = {
+    enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
+    attributes:[], //what are the attributes for?
+    name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
+    roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
+    account: "group1", //this affiliation in Member Services 
+    affiliation: "00002", //this is affiliationRole in Member Services
+    vote: "no",
+};
+
+enrollmentID = "Pants";
+var registrationRequest2 = {
+    enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
+    name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
+    roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
+    account: "group1", //this affiliation in Member Services 
+    affiliation: "00001", //this is affiliationRole in Member Services
+    vote: "yes"
+};
 
 function enrollAdmin() {
 
@@ -157,49 +193,23 @@ function enrollAdmin() {
 
         //TODO: have some kind of delay here as registering a new user won't work if done right away?
 
-        registerNewUser();
+        registerNewUser(registrationRequest);
+        registerNewUser(registrationRequest2);
     });
 }
 var chaincodeID;
 if (USE_BLOCKVOTE_CC) {
     //Our chaincode
-    chaincodeID = "ce465d9c6aecfe7b4700040f421321902eff87c7ad99ebac75353307aaa334b1";
+    chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
 } else {
     //sample chaincoide ID 
-    chaincodeID = "a569251165110822059e16567616f7326c085275469a7afbdd7789e4d81c44ce";
+    chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
 }
 
 
-/*
-     PROBLEMS:
-        - it is hard to create new users, the membership services is shoddy and does not respond, resulting to erros on my side
-        - You may find that you have to rerun the registration and enrollment sequence for a user serveral times before it is accepted
-        
 
-        - affiliation and account NOTES for each user: https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
-            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
-        - it seems like we cannot use events that are built in fabric using the IBM Blockchain 
-            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/24
 
- */
-
-/*
-    Notes:
-    - It seems like to change the role other than 'client', we need some kind of special permission from the admin 
-    - other values for affiliation and account are not possible at the moment https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
-        - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
-
- */
-var enrollmentID = "Shirt";
-var registrationRequest = {
-    enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
-    name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
-    roles: "validator", //this is role in Member Services, choices are ["client","peer","validator","auditor"]
-    account: "group1", //this affiliation in Member Services 
-    affiliation: "00001" //this is affiliationRole in Member Services
-};
-
-function registerNewUser() {
+function registerNewUser(newMem) {
 
     /*
         trace the registration sequence 
@@ -213,24 +223,20 @@ function registerNewUser() {
             - membership services uses some crypto,grpc , other components to create a token for the user 
             - this token is set to the new member as the enrollmentID 
 
-            - Does member services record the new member ? yes it does 
-                - it seems to record id, roles, account and affiliation
-                - the problem is our chain does not record these info 
             - only the enrollmentID is used when creating the new member object inside HFC
      */
-    console.log("Now registering: " + registrationRequest.name);
+    console.log("Now registering: " + newMem.name);
 
 
-    chain.register(registrationRequest, function(err, enrollmentSecret) {
+    chain.register(newMem, function(err, enrollmentSecret) {
         if (err) {
-            throw Error("Failed to register " + registrationRequest.name + ": " + err);
+            throw Error("Failed to register " + newMem.name + ": " + err);
         }
-        console.log("Succesfully registered " + registrationRequest.name);
-        registrationRequest.enrollmentSecret = enrollmentSecret;
+        console.log("Succesfully registered " + newMem.name);
+        newMem.enrollmentSecret = enrollmentSecret;
         //At this point, 'registration' only enables this person to enroll
 
-        //TODO: have some kind of delay here as enrolling the user won't work if done right away?
-        enrollNewUser();
+        enrollNewUser(newMem.enrollmentID, newMem.enrollmentSecret);
 
     });
 
@@ -238,22 +244,22 @@ function registerNewUser() {
 
 var MemberList = [];
 
-function enrollNewUser() {
+function enrollNewUser(id, secret) {
     /*
         trace the enrollment sequence 
         TODO: Why didn't the role, account and affiliation from registrationRequest 
-                not get recorded on the member? 
+                not get recorded on the member object? 
         Sequence:
             - 
      */
     console.log("Now enrolling: " + registrationRequest.name);
-    chain.enroll(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret,
+    chain.enroll(id, secret,
         function(err, member) {
             if (err) {
-                throw Error("Failed to enroll " + registrationRequest.name + ": " + err);
+                throw Error("Failed to enroll " + id + ": " + err);
             }
 
-            console.log("Succesfully enrolled " + registrationRequest.name);
+            console.log("Succesfully enrolled " + id);
 
             //A member object is returned 
 
@@ -262,35 +268,31 @@ function enrollNewUser() {
 
             // member.setRoles(["Voter", "Citizen"]);
 
-
-
-            /*
-            TODO:
-                - utilize the roles, affiliation and account 
-                - get the new registered user to cast his vote 
-                - 
-                - 
-            */
-
             MemberList.push(member);
-            queryChainCode(member);
-            //User invokes the chaincode  
-            // invokeChainCode(member);
+            console.log(member);
+            // queryChainCode(member);
+            //User invokes the chaincode
+            if(id == "Pants"){
+                invokeChainCode(member, "no");    
+            } else{
+                invokeChainCode(member, "yes");    
 
-            //User queries the chaincode 
+            }
+            
+
         }
     );
 }
 
-function invokeChainCode(member) {
-    console.log("invoking chaincode...");
+function invokeChainCode(member, vote) {
+    console.log(member.name + " is invoking chaincode...");
     var invokeRequest;
 
     if (USE_BLOCKVOTE_CC) {
         invokeRequest = {
             chaincodeID: chaincodeID,
             fcn: "write",
-            args: ["Brexit", "no"]
+            args: [member.name, vote]
         };
     } else {
         invokeRequest = {
@@ -306,22 +308,22 @@ function invokeChainCode(member) {
     // Print the invoke results
     invokeTx.on('submitted', function(results) {
         // Invoke transaction submitted successfully
-        console.log(util.format("\nSuccessfully submitted chaincode invoke transaction: request=%j, response=%j", invokeRequest, results));
+        console.log(util.format("\n%s Successfully submitted chaincode invoke transaction: request=%j, response=%j", member.name, invokeRequest, results));
     });
     invokeTx.on('complete', function(results) {
         // Invoke transaction completed successfully
-        console.log(util.format("\nSuccessfully completed chaincode invoke transaction: request=%j, response=%j", invokeRequest, results));
+        console.log(util.format("\n%s Successfully completed chaincode invoke transaction: request=%j, response=%j", member.name, invokeRequest, results));
         queryChainCode(member);
     });
     invokeTx.on('error', function(err) {
         // Invoke transaction submission failed
-        console.log(util.format("\nFailed to submit chaincode invoke transaction: request=%j, error=%j", invokeRequest, err));
+        console.log(util.format("\n%s Failed to submit chaincode invoke transaction: request=%j, error=%j", member.name, invokeRequest, err));
     });
 
 }
 
 function queryChainCode(member) {
-    console.log("querying chaincode...");
+    console.log(member.name + " is querying chaincode...");
     // Construct the query request
     var queryRequest;
     if (USE_BLOCKVOTE_CC) {
@@ -331,7 +333,7 @@ function queryChainCode(member) {
             // Function to trigger
             fcn: "read",
             // Existing state variable to retrieve
-            args: ["Brexit"]
+            args: [member.name]
         }
     } else {
         queryRequest = {
@@ -351,11 +353,11 @@ function queryChainCode(member) {
     // Print the query results
     queryTx.on('complete', function(results) {
         // Query completed successfully
-        console.log("\nSuccessfully queried  chaincode function: request=%j, value=%s", queryRequest, results.result.toString());
+        console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
     });
     queryTx.on('error', function(err) {
         // Query failed
-        console.log("\nFailed to query chaincode, function: request=%j, error=%j", queryRequest, err);
+        console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
     });
 }
 
@@ -365,14 +367,14 @@ function queryChainCode(member) {
 // create a new express server
 var app = express();
 
-// serve the files out of ./public as our main files
-app.use(express.static(__dirname + '/public'));
+// // serve the files out of ./public as our main files
+// app.use(express.static(__dirname + '/public'));
 
 
 
-app.listen(port, hostname, function() {
-    console.log(`Server running at http://${hostname}:${port}/`);
-});
+// app.listen(port, hostname, function() {
+//     console.log(`Server running at http://${hostname}:${port}/`);
+// });
 
 //Setup the APIs for communication between front end and back end 
 
