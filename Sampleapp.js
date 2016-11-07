@@ -47,16 +47,6 @@ try {
 
 var peers = network.credentials.peers;
 var users = network.credentials.users;
-
-
-var chaincodeID;
-if (USE_BLOCKVOTE_CC) {
-    //Our chaincode, change this parameter if you are invoking your own 
-    chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
-} else {
-    //sample chaincoide ID 
-    chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
-}
 //******************************Application parameters DONE**********************
 
 //*******************************Bluemix SETUP START ******************************
@@ -120,6 +110,43 @@ var uuid = network_id[0].substring(0, 8);
 chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
 
 var admin;
+/*
+    PROBLEMS:       
+
+        - affiliation and account NOTES for each user: https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
+        - it seems like we cannot use events that are built in fabric using the IBM Blockchain 
+            - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/24
+    Notes:
+        - other values for affiliation and account are not possible at the moment https://github.com/IBM-Blockchain/ibm-blockchain-issues/tree/master/hfc_help
+        - https://github.com/IBM-Blockchain/ibm-blockchain-issues/issues/18
+
+ */
+
+/*
+   
+
+ */
+var enrollmentID = "Tie";
+var registrationRequest = {
+    enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
+    attributes: [], //what are the attributes for?
+    name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
+    roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
+    account: "group1", //this affiliation in Member Services 
+    affiliation: "00002", //this is affiliationRole in Member Services
+    vote: "no",
+};
+
+enrollmentID = "Pants";
+var registrationRequest2 = {
+    enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
+    name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
+    roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
+    account: "group1", //this affiliation in Member Services 
+    affiliation: "00001", //this is affiliationRole in Member Services
+    vote: "yes"
+};
 
 function enrollAdmin() {
 
@@ -138,6 +165,10 @@ function enrollAdmin() {
         });
     }
 
+    // console.log("\n\n------------- peers and caserver information: -------------");
+    // console.log(chain.getPeers());
+    // console.log(chain.getMemberServices());
+    // console.log('-----------------------------------------------------------\n\n');
 
     if (DEV_MODE) {
         chain.setDevMode(true);
@@ -163,45 +194,69 @@ function enrollAdmin() {
         chain.setRegistrar(admin);
         // console.log(admin)
         console.log("Admin is now enrolled.");
+
+        registerNewUser(registrationRequest);
+        registerNewUser(registrationRequest2);
     });
 }
 //*******************************Admin SETUP DONE *******************************
 
 
+var chaincodeID;
+if (USE_BLOCKVOTE_CC) {
+    //Our chaincode
+    chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
+} else {
+    //sample chaincoide ID 
+    chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
+}
+
+
 
 //*******************************USER Registration/Enrollment START ********************
-function registerNewUser(id, vote, userTransaction) {
-    var enrollmentID = id;
-    var registrationRequest = {
-        enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
-        attributes: [], //what are the attributes for?
-        name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
-        roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
-        account: "group1", //this affiliation in Member Services 
-        affiliation: "00002", //this is affiliationRole in Member Services
-        vote: vote,
-    };
+function registerNewUser(newMem) {
 
-    console.log("Now registering: " + registrationRequest.name);
+    /*
+        trace the registration sequence 
+        Sequence:
+            - the chain determines if it should make a new member for this case
+            - the chain makes the new/already present user register itself 
+            - the member passes the registration to the memberservices 
+            - the membership services asks for the registration request and the admin of this chain
+            - TODO: read on the security jargon implemented in the membership services constructor
+            - membership services requires registrar to be set before registering new users 
+            - membership services uses some crypto,grpc , other components to create a token for the user 
+            - this token is set to the new member as the enrollmentID 
+
+            - only the enrollmentID is used when creating the new member object inside HFC
+     */
+    console.log("Now registering: " + newMem.name);
 
 
-    chain.register(registrationRequest, function(err, enrollmentSecret) {
+    chain.register(newMem, function(err, enrollmentSecret) {
         if (err) {
-            throw Error("Failed to register " + registrationRequest.name + ": " + err);
+            throw Error("Failed to register " + newMem.name + ": " + err);
         }
-        console.log("Succesfully registered " + registrationRequest.name);
-        registrationRequest.enrollmentSecret = enrollmentSecret;
+        console.log("Succesfully registered " + newMem.name);
+        newMem.enrollmentSecret = enrollmentSecret;
         //At this point, 'registration' only enables this person to enroll
 
-        enrollNewUser(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret,
-            registrationRequest.vote, userTransaction);
+        enrollNewUser(newMem.enrollmentID, newMem.enrollmentSecret);
 
     });
 
 }
 
-function enrollNewUser(id, secret, vote, userTransaction) {
+var MemberList = [];
 
+function enrollNewUser(id, secret) {
+    /*
+        trace the enrollment sequence 
+        TODO: Why didn't the role, account and affiliation from registrationRequest 
+                not get recorded on the member object? 
+        Sequence:
+            - 
+     */
     console.log("Now enrolling: " + registrationRequest.name);
     chain.enroll(id, secret,
         function(err, member) {
@@ -210,16 +265,25 @@ function enrollNewUser(id, secret, vote, userTransaction) {
             }
 
             console.log("Succesfully enrolled " + id);
-            //User invokes the chaincode
 
-            if (userTransaction == "invoke") {
-                invokeChainCode(member, vote);
-                return;
+            //A member object is returned 
+
+            //Note: Members are not saved in the chain object here in server side 
+            //Andrei: Should we record the missed members and its parameters inside this chain object?
+
+            // member.setRoles(["Voter", "Citizen"]);
+
+            MemberList.push(member);
+            console.log(member);
+            // queryChainCode(member);
+            //User invokes the chaincode
+            if (id == "Pants") {
+                invokeChainCode(member, "no");
+            } else {
+                invokeChainCode(member, "yes");
+
             }
-            if (userTransaction == "query"){
-                queryChainCode(member, vote);
-                return;
-            }
+
 
         }
     );
@@ -229,12 +293,21 @@ function enrollNewUser(id, secret, vote, userTransaction) {
 //*******************************Transaction functions START ********************
 function invokeChainCode(member, vote) {
     console.log(member.name + " is invoking chaincode...");
-    var invokeRequest = {
-        chaincodeID: chaincodeID,
-        fcn: "write",
-        args: [member.name, vote]
-    };
+    var invokeRequest;
 
+    if (USE_BLOCKVOTE_CC) {
+        invokeRequest = {
+            chaincodeID: chaincodeID,
+            fcn: "write",
+            args: [member.name, vote]
+        };
+    } else {
+        invokeRequest = {
+            chaincodeID: chaincodeID,
+            fcn: "invoke",
+            args: ["a", "b", "1"]
+        };
+    }
 
     // Trigger the invoke transaction
     var invokeTx = member.invoke(invokeRequest);
@@ -247,6 +320,7 @@ function invokeChainCode(member, vote) {
     invokeTx.on('complete', function(results) {
         // Invoke transaction completed successfully
         console.log(util.format("\n%s Successfully completed chaincode invoke transaction: request=%j, response=%j", member.name, invokeRequest, results));
+        queryChainCode(member);
     });
     invokeTx.on('error', function(err) {
         // Invoke transaction submission failed
@@ -258,14 +332,27 @@ function invokeChainCode(member, vote) {
 function queryChainCode(member) {
     console.log(member.name + " is querying chaincode...");
     // Construct the query request
-    var queryRequest = {
-        // Name (hash) required for query
-        chaincodeID: chaincodeID,
-        // Function to trigger
-        fcn: "read",
-        // Existing state variable to retrieve
-        args: [member.name]
+    var queryRequest;
+    if (USE_BLOCKVOTE_CC) {
+        queryRequest = {
+            // Name (hash) required for query
+            chaincodeID: chaincodeID,
+            // Function to trigger
+            fcn: "read",
+            // Existing state variable to retrieve
+            args: [member.name]
+        }
+    } else {
+        queryRequest = {
+            // Name (hash) required for query
+            chaincodeID: chaincodeID,
+            // Function to trigger
+            fcn: "query",
+            // Existing state variable to retrieve
+            args: ["a"]
+        }
     }
+
 
     // Trigger the query transaction
     var queryTx = member.query(queryRequest);
@@ -292,13 +379,31 @@ var app = express();
 
 
 
-app.listen(port, hostname, function() {
-    console.log(`Server running at http://${hostname}:${port}/`);
-});
+// app.listen(port, hostname, function() {
+//     console.log(`Server running at http://${hostname}:${port}/`);
+// });
 
-//TODO: Create the APIS and have it tested with postman
-//TODO: Create the web front end and test the backend with it 
-//TODO: Create a program that will stress test the IBM Blockchain on Bluemix 
+//Setup the APIs for communication between front end and back end 
+
+//functions to interface with IBM Blockchain
+// function registerNewUser() {
+//     //admin registers the new user
+
+// }
+
+function enrollUser() {
+    //admin enrolls the user
+}
+
+
+//set the vote 
+function invoke() {
+
+}
+
+function query() {
+
+}
 
 //*******************************WEB APP SERVICE DONE ******************************
 
