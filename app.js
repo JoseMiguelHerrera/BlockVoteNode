@@ -171,7 +171,7 @@ function enrollAdmin() {
 
 
 //*******************************USER Registration/Enrollment START ********************
-function registerNewUser(id, vote, userTransaction) {
+function registerUser(id, userTransaction) {
     var enrollmentID = id;
     var registrationRequest = {
         enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
@@ -179,10 +179,10 @@ function registerNewUser(id, vote, userTransaction) {
         name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
         roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
         account: "group1", //this affiliation in Member Services 
-        affiliation: "00002", //this is affiliationRole in Member Services
-        vote: vote,
-    };
+        affiliation: "00002" //this is affiliationRole in Member Services
 
+    };
+    console.log(userTransaction);
     console.log("Now registering: " + registrationRequest.name);
 
 
@@ -194,16 +194,15 @@ function registerNewUser(id, vote, userTransaction) {
         registrationRequest.enrollmentSecret = enrollmentSecret;
         //At this point, 'registration' only enables this person to enroll
 
-        enrollNewUser(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret,
-            registrationRequest.vote, userTransaction);
+        enrollUser(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret, userTransaction);
 
     });
 
 }
 
-function enrollNewUser(id, secret, vote, userTransaction) {
+function enrollUser(id, secret, userTransaction) {
 
-    console.log("Now enrolling: " + registrationRequest.name);
+    console.log("Now enrolling: " + id);
     chain.enroll(id, secret,
         function(err, member) {
             if (err) {
@@ -212,13 +211,14 @@ function enrollNewUser(id, secret, vote, userTransaction) {
 
             console.log("Succesfully enrolled " + id);
             //User invokes the chaincode
-
-            if (userTransaction == "invoke") {
-                invokeChainCode(member, vote);
+            console.log(id + " wants to " + userTransaction.type);
+            console.log(userTransaction);
+            if (userTransaction.type == "invoke") {
+                invokeChainCode(member, userTransaction.vote);
                 return;
             }
-            if (userTransaction == "query"){
-                queryChainCode(member, vote);
+            if (userTransaction.type == "query") {
+                queryChainCode(member);
                 return;
             }
 
@@ -305,15 +305,24 @@ app.listen(port, hostname, function() {
 
 //TODO: Create the APIS and have it tested with postman
 
-app.post('/vote', function(req,res){
+app.post('/vote', function(req, res) {
     console.log("enrollmentID: " + req.body.enrollmentID + " vote: " + req.body.vote + " invokes.");
     //Call the invoke 
+    var userTransaction = {
+        type: "invoke",
+        vote: req.body.vote
+    }
+    registerUser(req.body.enrollmentID, userTransaction);
     res.end();
 });
 
-app.post('/query', function(req, res){
+app.post('/query', function(req, res) {
     console.log("enrollmentID: " + req.body.enrollmentID + " query.");
     //Call the query 
+    var userTransaction = {
+        type: "query"
+    }
+    registerUser(req.body.enrollmentID, userTransaction);
     res.end();
 });
 
