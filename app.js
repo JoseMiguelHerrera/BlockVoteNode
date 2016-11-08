@@ -1,5 +1,6 @@
 /*eslint-env node*/
-
+var morgan = require('morgan');
+var bodyParser = require('body-parser');
 var express = require('express');
 var util = require('util');
 // cfenv provides access to your Cloud Foundry environment
@@ -287,16 +288,36 @@ function queryChainCode(member) {
 // create a new express server
 var app = express();
 
+//Use morgan for logging, it is currently on dev mode  
+app.use(morgan('dev'));
+//parse the JSON body of a POST request 
+app.use(bodyParser.json());
+
 // // serve the files out of ./public as our main files
 // app.use(express.static(__dirname + '/public'));
 
 
-
+var hostname = 'localhost';
+var port = 3000;
 app.listen(port, hostname, function() {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
 
 //TODO: Create the APIS and have it tested with postman
+
+app.post('/vote', function(req,res){
+    console.log("enrollmentID: " + req.body.enrollmentID + " vote: " + req.body.vote + " invokes.");
+    //Call the invoke 
+    res.end();
+});
+
+app.post('/query', function(req, res){
+    console.log("enrollmentID: " + req.body.enrollmentID + " query.");
+    //Call the query 
+    res.end();
+});
+
+
 //TODO: Create the web front end and test the backend with it 
 //TODO: Create a program that will stress test the IBM Blockchain on Bluemix 
 
