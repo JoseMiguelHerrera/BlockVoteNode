@@ -291,10 +291,10 @@ var app = express();
 //Use morgan for logging, it is currently on dev mode  
 app.use(morgan('dev'));
 //parse the JSON body of a POST request 
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
 
-// // serve the files out of ./public as our main files
-// app.use(express.static(__dirname + '/public'));
+// serve the files out of ./public as our main files
+app.use(express.static(__dirname + '/public'));
 
 
 var hostname = 'localhost';
@@ -303,7 +303,7 @@ app.listen(port, hostname, function() {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
 
-//TODO: Create the APIS and have it tested with postman
+//TODO: Enable selection of ElectionChaincode 
 
 app.post('/vote', function(req, res) {
     console.log("enrollmentID: " + req.body.enrollmentID + " vote: " + req.body.vote + " invokes.");
@@ -313,6 +313,7 @@ app.post('/vote', function(req, res) {
         vote: req.body.vote
     }
     registerUser(req.body.enrollmentID, userTransaction);
+    //TODO: send out feedback
     res.end();
 });
 
@@ -323,11 +324,10 @@ app.post('/query', function(req, res) {
         type: "query"
     }
     registerUser(req.body.enrollmentID, userTransaction);
+    //TODO: send out feedback
     res.end();
 });
 
-
-//TODO: Create the web front end and test the backend with it 
 //TODO: Create a program that will stress test the IBM Blockchain on Bluemix 
 
 //*******************************WEB APP SERVICE DONE ******************************

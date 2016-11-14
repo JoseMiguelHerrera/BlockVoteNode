@@ -1,26 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
-  <head>
-    <title>NodeJS Starter Application</title>
+<head>
+    <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Your page title here :)</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="stylesheets/style.css">
-  </head>
+    <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/skeleton.css">
+    <link rel="stylesheet" href="css/main.css">
+    <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <!-- <link rel="icon" type="image/png" href="images/favicon.png"> -->
+</head>
 
-  <body>
-    <table>
-      <tr>
-        <td style= "width:30%;">
-          <img class = "newappIcon" src="images/newapp-icon.png">
-        </td>
-        <td>
-          <h1 id="message">Hello World!</h1>
-          <p class='description'></p> Thanks for creating a <span class = "blue">NodeJS Starter Application</span>.
-        </td>
-      </tr>
-    </table>
-  </body>
+<body>
+    <!-- Primary Page Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <!--  -->
+    <h1>BlockVote</h1>
+    <div class="row">
+        <div class="six columns">
+            <label for="exampleRecipientInput">Available Elections</label>
+            <select class="u-full-width" id="exampleRecipientInput">
+                <option value="Option 1" selected>Brexit</option>
+                <option value="Option 2">Best Laptop Brand</option>
+                <option value="Option 3">Best Cuisine</option>
+            </select>
+        </div>
+        <div class="six columns">
+            <label for="exampleRecipientInput">Action</label>
+            <select class="u-full-width" id="exampleRecipientInput">
+                <option value="Option 1" selected>Vote</option>
+                <option value="Option 2">Review Vote</option>
+                <option value="Option 3">Review Results</option>
+            </select>
+        </div>
+    </div>
+    <!-- Voting form  -->
+    <form action="http://localhost:3000/vote" method="post">
+        <div class="row">
+            <div class="three columns">
+                <label for="exampleName">Your Name</label>
+                <input name="enrollmentID" class="u-full-width" placeholder="John Snow" id="exampleName">
+            </div>
+        </div>
+        <!-- List the choices of the election -->
+        <div class="row electionChoices">
+            <input type="radio" name="vote" value="yes" checked> Yes
+            <br>
+            <input type="radio" name="vote" value="no"> No</div>
+        <!-- Submit button -->
+        <div class="row">
+            <input class="button-primary" type="submit" value="Vote">
+        </div>
+        <div class="feedback"></div>
+    </form>
+    <!-- Query form -->
+    <form action="http://localhost:3000/query" method="post">
+        <div class="row">
+            <div class="three columns">
+                <label for="exampleName">Your Name</label>
+                <input name="enrollmentID" class="u-full-width" placeholder="John Snow" id="exampleName">
+            </div>
+        </div>
+        <!-- Submit button -->
+        <input class="button-primary" type="submit" value="Query">
+        <div class="feedback"></div>
+    </form>
+    <div class="results">
+        Reviewing of results is not avaible yet.
+        <div class="feedback"></div>
+    </div>
+    <!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
 
 </html>
