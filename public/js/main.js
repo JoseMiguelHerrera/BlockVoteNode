@@ -10,14 +10,15 @@ $(document).ready(function () {
                 action = $(this).val();
             }
         });
+        var electionType;
+        $('#availElections option').each(function () {
+            if ($(this).is(':selected')) {
+                electionType = $(this).val();
+            }
+        });
         //Set the appropriate form 
         if (action == "Vote") {
-            var electionType;
-            $('#availElections option').each(function () {
-                if ($(this).is(':selected')) {
-                    electionType = $(this).val();
-                }
-            });
+
             $('.optionCanvas').empty();
             if (electionType == "Brexit") {
                 $('.optionCanvas').append(Votingform);
@@ -32,9 +33,18 @@ $(document).ready(function () {
         }
 
         if (action == "ReviewVote") {
-            console.log("Display review vote");
+
             $('.optionCanvas').empty();
-            $('.optionCanvas').append(Queryform);
+            if (electionType == "Brexit") {
+                $('.optionCanvas').empty();
+                $('.optionCanvas').append(Queryform);
+            }
+            if (electionType == "Laptop") {
+                $('.optionCanvas').append(laptopElection);
+            }
+            if (electionType == "Cuisine") {
+                $('.optionCanvas').append(cuisineElection);
+            }
         }
 
         if (action == "ReviewResults") {
