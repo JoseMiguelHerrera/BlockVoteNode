@@ -7,12 +7,12 @@
 - Present the results of the referendum 
 
 **Milestones**
-- [ ] Register and enroll voters
+- [X] Register and enroll voters
 - [X] Register and enroll hardcoded voters
 - [ ] Serve results back to voters  
 
 **TODO**
-- [ ] Create front end 
+- [X] Create front end 
 - [X] Port skeleton code from examples 
 
 **Resource**
