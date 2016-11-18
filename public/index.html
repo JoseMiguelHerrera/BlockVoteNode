@@ -1,26 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
-  <head>
-    <title>NodeJS Starter Application</title>
+<head>
+    <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Your page title here :)</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="stylesheets/style.css">
-  </head>
+    <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/skeleton.css">
+    <link rel="stylesheet" href="css/main.css">
+    <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <!-- <link rel="icon" type="image/png" href="images/favicon.png"> -->
+</head>
 
-  <body>
-    <table>
-      <tr>
-        <td style= "width:30%;">
-          <img class = "newappIcon" src="images/newapp-icon.png">
-        </td>
-        <td>
-          <h1 id="message">Hello World!</h1>
-          <p class='description'></p> Thanks for creating a <span class = "blue">NodeJS Starter Application</span>.
-        </td>
-      </tr>
-    </table>
-  </body>
+<body>
+    <!-- Primary Page Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <!--  -->
+    <h1>BlockVote</h1>
+    <div class="row">
+        <div class="six columns">
+            <label for="availElections">Available Elections</label>
+            <select class="u-full-width" id="availElections">
+                <option value="Brexit" selected>Brexit</option>
+                <option value="Laptop">Best Laptop Brand</option>
+                <option value="Cuisine">Best Cuisine</option>
+            </select>
+        </div>
+        <div class="six columns">
+            <label for="BlockVoteoptions">Action</label>
+            <select class="u-full-width" id="BlockVoteoptions">
+                <option id="vote" value="Vote" selected>Vote</option>
+                <option id="reviewVote" value="ReviewVote">Review Vote</option>
+                <option id="reviewResults" value="ReviewResults">Review Results</option>
+            </select>
+        </div>
+    </div>
+    <input id="setButton" class="button-primary" type="submit" value="Set">
+   <div class="optionCanvas">
+     
+   </div>
+    
+   
+    <!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+<script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+    <script>
+    window.jQuery || document.write('<script src="js/vendor/jquery-1.12.0.min.js"><\/script>')
+    </script>
+<!-- JQuery -->
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+<!-- Application -->
+    <script src="js/main.js"></script>
 
 </html>
