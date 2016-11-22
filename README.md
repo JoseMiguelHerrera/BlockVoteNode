@@ -9,11 +9,9 @@
 **Milestones**
 - [X] Register and enroll voters
 - [X] Register and enroll hardcoded voters
-- [ ] Serve results back to voters  
-
-**TODO**
-- [X] Create front end 
-- [X] Port skeleton code from examples 
+- [ ] Prettify the demo 
+- [ ] Serve election results back to voters  
+- [ ] Upload the Node.js and frontend to Bluemix 
 
 **Resource**
  - Read this to see the methods in HFC: github.com/hyperledger/fabric/sdk/node/lib/hfc.js

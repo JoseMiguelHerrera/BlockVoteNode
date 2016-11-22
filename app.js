@@ -171,7 +171,7 @@ function enrollAdmin() {
 
 
 //*******************************USER Registration/Enrollment START ********************
-function registerUser(id, userTransaction) {
+function registerUser(id, userTransaction, res) {
     var enrollmentID = id;
     var registrationRequest = {
         enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
@@ -194,13 +194,13 @@ function registerUser(id, userTransaction) {
         registrationRequest.enrollmentSecret = enrollmentSecret;
         //At this point, 'registration' only enables this person to enroll
 
-        enrollUser(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret, userTransaction);
+        enrollUser(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret, userTransaction, res);
 
     });
 
 }
 
-function enrollUser(id, secret, userTransaction) {
+function enrollUser(id, secret, userTransaction, res) {
 
     console.log("Now enrolling: " + id);
     chain.enroll(id, secret,
@@ -214,11 +214,11 @@ function enrollUser(id, secret, userTransaction) {
             console.log(id + " wants to " + userTransaction.type);
             console.log(userTransaction);
             if (userTransaction.type == "invoke") {
-                invokeChainCode(member, userTransaction.vote);
+                invokeChainCode(member, userTransaction.vote, res);
                 return;
             }
             if (userTransaction.type == "query") {
-                queryChainCode(member);
+                queryChainCode(member, res);
                 return;
             }
 
@@ -228,7 +228,7 @@ function enrollUser(id, secret, userTransaction) {
 //*******************************USER Registration/Enrollment DONE ********************
 
 //*******************************Transaction functions START ********************
-function invokeChainCode(member, vote) {
+function invokeChainCode(member, vote, res) {
     console.log(member.name + " is invoking chaincode...");
     var invokeRequest = {
         chaincodeID: chaincodeID,
@@ -248,15 +248,19 @@ function invokeChainCode(member, vote) {
     invokeTx.on('complete', function(results) {
         // Invoke transaction completed successfully
         console.log(util.format("\n%s Successfully completed chaincode invoke transaction: request=%j, response=%j", member.name, invokeRequest, results));
+        res.end('You have succesfully voted! You can review your vote with the "Review Vote" action');
     });
     invokeTx.on('error', function(err) {
         // Invoke transaction submission failed
         console.log(util.format("\n%s Failed to submit chaincode invoke transaction: request=%j, error=%j", member.name, invokeRequest, err));
+        res.end("Sorry, your submission has failed. Please contact the system administrator.");
     });
+    //End the response proces 
+    // res.end();
 
 }
 
-function queryChainCode(member) {
+function queryChainCode(member, res) {
     console.log(member.name + " is querying chaincode...");
     // Construct the query request
     var queryRequest = {
@@ -275,11 +279,15 @@ function queryChainCode(member) {
     queryTx.on('complete', function(results) {
         // Query completed successfully
         console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
+        res.send(member.name + " has voted "+ results.result.toString());
     });
     queryTx.on('error', function(err) {
         // Query failed
         console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
+        res.send("Sorry, your query has failed. Please contact the system administrator");
     });
+    //End the response proces 
+    res.end();
 }
 
 //*******************************Transaction functions DONE ********************
@@ -312,9 +320,7 @@ app.post('/vote', function(req, res) {
         type: "invoke",
         vote: req.body.vote
     }
-    registerUser(req.body.enrollmentID, userTransaction);
-    //TODO: send out feedback
-    res.end();
+    registerUser(req.body.enrollmentID, userTransaction, res);
 });
 
 app.post('/query', function(req, res) {
@@ -323,10 +329,21 @@ app.post('/query', function(req, res) {
     var userTransaction = {
         type: "query"
     }
-    registerUser(req.body.enrollmentID, userTransaction);
-    //TODO: send out feedback
-    res.end();
+    registerUser(req.body.enrollmentID, userTransaction, res);
 });
+
+// app.post('/', function(req, res){
+//     console.log("enrollmentID: " + req.body.enrollmentID + " " + req.body.action);
+//     var userTransaction = {
+//         type: req.body.action,
+//         vote: req.body.vote
+//     }
+//     registerUser(req.body.enrollmentID, userTransaction);
+
+
+//     //TODO: send out feedback
+//     res.end();
+// })
 
 //TODO: Create a program that will stress test the IBM Blockchain on Bluemix 
 

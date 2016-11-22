@@ -1,121 +1,79 @@
+var URLvote = "http://localhost:3000/vote"
+var URLquery = "http://localhost:3000/query";
+
 $(document).ready(function() {
 
     $('#setButton').click(function() {
-        var action;
-        $('#BlockVoteoptions option').each(function() {
-            // console.log('we gettin it ' + $(this).val());
-            if ($(this).is(':selected')) {
-                action = $(this).val();
+
+        setClicked();
+
+        //Wait for user to click the submit button
+        $('form').submit(function(event) {
+
+            if (this.id == "votingform") {
+                //use the correct handler for the election  
+                switch (electionType) {
+                    case "Brexit":
+                        brexitElectionHandler();
+                        break;
+                    case "Laptop":
+                        laptopElectionHandler();
+                        break;
+                    case "Cuisine":
+                        cuisineElectionHandler();
+                        break;
+                }
             }
+            if(this.id == "queryform"){
+                queryFormhandler(); 
+            }
+
+            event.preventDefault();
         });
-        var electionType;
-        $('#availElections option').each(function() {
-            if ($(this).is(':selected')) {
-                electionType = $(this).val();
-            }
-        });
-        //Set the appropriate form 
-        if (action == "Vote") {
-
-            $('.optionCanvas').empty();
-            if (electionType == "Brexit") {
-                $('.optionCanvas').append(Votingform);
-                $('.electionsChoices').append(brexitElection);
-            }
-            if (electionType == "Laptop") {
-                $('.optionCanvas').append(laptopElection);
-            }
-            if (electionType == "Cuisine") {
-                $('.optionCanvas').append(cuisineElection);
-            }
-
-        }
-
-        if (action == "ReviewVote") {
-
-            $('.optionCanvas').empty();
-            if (electionType == "Brexit") {
-                 $('.optionCanvas').empty();
-            $('.optionCanvas').append(Queryform);
-            }
-            if (electionType == "Laptop") {
-                 $('.optionCanvas').append(laptopElection);
-            }
-            if (electionType == "Cuisine") {
-                $('.optionCanvas').append(cuisineElection);
-            }
-        }
-
-        if (action == "ReviewResults") {
-            console.log("Display review results");
-            $('.optionCanvas').empty();
-            $('.optionCanvas').append(ResultsSection);
-        }
 
     })
 });
 
+var queryFormhandler = function(){
+    //Error checking 
+    if (!$('input[name=enrollmentID]').val()) {
+        window.alert("Please enter your name");
+    }
+    var submitData = {
+        'enrollmentID': $('input[name=enrollmentID]').val()
+    }
 
-var brexitElection = `
-	<div class="row electionChoices">
-            <input type="radio" name="vote" value="yes" checked> Yes
-            <br>
-            <input type="radio" name="vote" value="no"> No</div>
-`;
+     //Start the querying animation 
 
-var laptopElection = `
-	<div>
-		<p> Laptop Election is not available yet.</p>
-	</div>
-`;
+    //Submit the vote using JQuery AJAX 
+    $.ajax({
+        type: 'POST',
+        url: URLquery,
+        data: submitData
+    }).done(function(data) {
+        console.log(data);
+       
+    });
 
-var cuisineElection = `
-	<div>
-		<p> Cuisine Election is not available yet.</p>
-	</div>
-`;
+}
 
+var loadingPageAnimation =`
+<div class="mini-loader-content">
+  <svg id="mini-loader" xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500.00001 500.00001">
+    <g>
+      <path id="b0" d="M66.734 66.734v366.533h366.532V66.734H66.734zm15 15h336.532v336.533H81.734V81.734z">
+      </path>
+      <path id="b2" d="M354.16 2.5v143.34H497.5V2.5H354.16zm10 10H487.5v123.34H364.16V12.5z">
+      </path>
+      <path id="b1" d="M0 2.5v143.34h143.34V2.5H0zm10 10h123.34v123.34H10V12.5z">
+      </path>
+      <path id="b3" d="M354.16 356.66V500H497.5V356.66H354.16zm10 10H487.5V490H364.16V366.66z">
+      </path>
+      <path id="b4" d="M0 356.66V500h143.34V356.66H0zm10 10h123.34V490H10V366.66z">
+      </path>
+    </g>
+  </svg>
+</div>
+<p>https://codepen.io/elhombretecla/pen/yOpKdr</p>
 
-var Votingform = `
- <!-- Voting form  -->
-    <form action="http://localhost:3000/vote" method="post">
-        <div class="row">
-            <div class="three columns">
-                <label for="exampleName">Your Name (no spaces)</label>
-                <input name="enrollmentID" class="u-full-width" placeholder="JohnSnow" id="exampleName">
-            </div>
-        </div>
-        <!-- List the choices of the election -->
-        <div class="electionsChoices">
-
-        </div>
-        <!-- Submit button -->
-        <div class="row">
-            <input class="button-primary" type="submit" value="Vote">
-        </div>
-        <div class="feedback"></div>
-    </form>
-
-`;
-
-var Queryform = `
-	<!-- Query form -->
-    <form action="http://localhost:3000/query" method="post">
-        <div class="row">
-            <div class="six columns">
-                <label for="exampleName">Your Name (no spaces)</label>
-                <input name="enrollmentID" class="u-full-width" placeholder="JohnSnow" id="exampleName">
-            </div>
-        </div>
-        <!-- Submit button -->
-        <input class="button-primary" type="submit" value="Query">
-        <div class="feedback"></div>
-    </form>
-`;
-
-var ResultsSection = `
-	 <div class="results">
-        Reviewing of results is not avaible yet.
-        <div class="feedback"></div>
-    </div>
-`;
+`
