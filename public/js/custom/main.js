@@ -34,28 +34,6 @@ $(document).ready(function() {
     })
 });
 
-var queryFormhandler = function(){
-    //Error checking 
-    if (!$('input[name=enrollmentID]').val()) {
-        window.alert("Please enter your name");
-    }
-    var submitData = {
-        'enrollmentID': $('input[name=enrollmentID]').val()
-    }
-
-     //Start the querying animation 
-
-    //Submit the vote using JQuery AJAX 
-    $.ajax({
-        type: 'POST',
-        url: URLquery,
-        data: submitData
-    }).done(function(data) {
-        console.log(data);
-       
-    });
-
-}
 
 var loadingPageAnimation =`
 <div class="mini-loader-content">

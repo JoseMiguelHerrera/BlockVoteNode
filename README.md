@@ -9,7 +9,7 @@
 **Milestones**
 - [X] Register and enroll voters
 - [X] Register and enroll hardcoded voters
-- [ ] Prettify the demo 
+- [X] Prettify the demo 
 - [ ] Serve election results back to voters  
 - [ ] Upload the Node.js and frontend to Bluemix 
 

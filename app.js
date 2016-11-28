@@ -189,6 +189,7 @@ function registerUser(id, userTransaction, res) {
     chain.register(registrationRequest, function(err, enrollmentSecret) {
         if (err) {
             throw Error("Failed to register " + registrationRequest.name + ": " + err);
+            res.end("Failed to enroll " + id + ": " + err);
         }
         console.log("Succesfully registered " + registrationRequest.name);
         registrationRequest.enrollmentSecret = enrollmentSecret;
@@ -207,6 +208,7 @@ function enrollUser(id, secret, userTransaction, res) {
         function(err, member) {
             if (err) {
                 throw Error("Failed to enroll " + id + ": " + err);
+                res.end("Failed to enroll " + id + ": " + err);
             }
 
             console.log("Succesfully enrolled " + id);
@@ -279,15 +281,13 @@ function queryChainCode(member, res) {
     queryTx.on('complete', function(results) {
         // Query completed successfully
         console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
-        res.send(member.name + " has voted "+ results.result.toString());
+        res.end(member.name + " has voted "+ results.result.toString());
     });
     queryTx.on('error', function(err) {
         // Query failed
         console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
-        res.send("Sorry, your query has failed. Please contact the system administrator");
+        res.end("Sorry, your query has failed. Please contact the system administrator");
     });
-    //End the response proces 
-    res.end();
 }
 
 //*******************************Transaction functions DONE ********************
@@ -320,7 +320,8 @@ app.post('/vote', function(req, res) {
         type: "invoke",
         vote: req.body.vote
     }
-    registerUser(req.body.enrollmentID, userTransaction, res);
+    var id = req.body.enrollmentID.replace(/ +/g, "");
+    registerUser(id, userTransaction, res);
 });
 
 app.post('/query', function(req, res) {
@@ -329,7 +330,8 @@ app.post('/query', function(req, res) {
     var userTransaction = {
         type: "query"
     }
-    registerUser(req.body.enrollmentID, userTransaction, res);
+    var id = req.body.enrollmentID.replace(/ +/g, "");
+    registerUser(id, userTransaction, res);
 });
 
 // app.post('/', function(req, res){

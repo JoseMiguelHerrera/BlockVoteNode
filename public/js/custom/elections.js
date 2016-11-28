@@ -1,20 +1,21 @@
 var brexitElection = `
-	<div class="row electionChoices">
-            <input type="radio" name="vote" value="yes"> Yes
+    <div class="row electionChoices">
+            <p>Should the UK remain a member of the EU or leave the EU?</p>
+            <input type="radio" name="vote" value="yes"> Leave EU
             <br>
-            <input type="radio" name="vote" value="no"> No</div>
+            <input type="radio" name="vote" value="no"> Remain a member of the EU</div>
 `;
 
 var laptopElection = `
-	<div>
-		<p> Laptop Election is not available yet.</p>
-	</div>
+    <div>
+        <p> Laptop Election is not available yet.</p>
+    </div>
 `;
 
 var cuisineElection = `
-	<div>
-		<p> Cuisine Election is not available yet.</p>
-	</div>
+    <div>
+        <p> Cuisine Election is not available yet.</p>
+    </div>
 `;
 
 
@@ -32,9 +33,9 @@ var brexitElectionHandler = function() {
 
     }
 
-     //Start submitting vote animation
-     $('.optionCanvas').empty();
-     $('.optionCanvas').append(loadingPageAnimation);
+    //Start submitting vote animation
+    $('.optionCanvas').empty();
+    $('.optionCanvas').append(loadingPageAnimation);
 
     //Submit the vote using JQuery AJAX 
     $.ajax({
@@ -43,15 +44,15 @@ var brexitElectionHandler = function() {
         data: submitData,
         dataType: 'text'
     }).done(function(data) {
-    	$('.optionCanvas').empty();
-    	var response = "<p>" + data + "</p>";
-    	$('.optionCanvas').append(response);
+        $('.optionCanvas').empty();
+        var response = "<p>" + data + "</p>";
+        $('.optionCanvas').append(response);
         // console.log('Finished submitting');
         console.log(data);
 
 
 
-       
+
     });
 
 
