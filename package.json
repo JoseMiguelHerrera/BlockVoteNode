@@ -8,13 +8,13 @@
 	"dependencies": {
 		"express": "4.13.x",
 		"cfenv": "1.0.x",
-		"hfc":"0.5.3",
+		"hfc":"^0.6.5",
 		"body-parser":"1.15.2",
 		"morgan":"1.7.0"
 
 	},
 	"repository": {},
 	"engines": {
-		"node": "4.x"
+		"node": "*"
 	} 
 }

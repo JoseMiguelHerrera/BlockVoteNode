@@ -1,5 +1,6 @@
 /*eslint-env node*/
-
+var morgan = require('morgan');
+var bodyParser = require('body-parser');
 var express = require('express');
 var util = require('util');
 // cfenv provides access to your Cloud Foundry environment
@@ -10,140 +11,150 @@ var util = require('util');
 var hfc = require('hfc');
 //Access directories 
 var fs = require('fs');
-const https = require('https');
+// const https = require('https');
 
+
+// var config;
+var chain;
+var network;
+var certPath;
+var peers;
+var users;
+// var userObj;
+// var newUserName;
+var chaincodeID;
+var certFile = 'us.blockchain.ibm.com.cert';
+// var chaincodeIDPath = __dirname + "/chaincodeID";
+
+
+var caUrl;
+var peerUrls = [];
+var EventUrls = [];
+
+//******************************Application parameters START**********************
 var USE_BLOCKVOTE_CC = true;
 var DEV_MODE = false;
-// Creating an environment variable for ciphersuites
-process.env['GRPC_SSL_CIPHER_SUITES'] = 'ECDHE-RSA-AES128-GCM-SHA256:' +
-    'ECDHE-RSA-AES128-SHA256:' +
-    'ECDHE-RSA-AES256-SHA384:' +
-    'ECDHE-RSA-AES256-GCM-SHA384:' +
-    'ECDHE-ECDSA-AES128-GCM-SHA256:' +
-    'ECDHE-ECDSA-AES128-SHA256:' +
-    'ECDHE-ECDSA-AES256-SHA384:' +
-    'ECDHE-ECDSA-AES256-GCM-SHA384';
-//*******************************HFC SDK SETUP START ******************************
 
-// Create a client blockchin.
-var chain = hfc.newChain("BallotChain")
-
-//Set the default chaincode path 
-var ccPath = "";
 if (USE_BLOCKVOTE_CC) {
-    ccPath = process.env["GOPATH"] + "/src/BlockVoteChainCode/start";
+    //Our chaincode, change this parameter if you are invoking your own 
+    // chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
+
+    //chaincode on the shared account 
+    chaincodeID = "a148fcad2fc0a66ee880d1feee0e31caf604aee24e7c5e39946fdbba17cb06ddd1746b6cca79dfb1aaee0c62a47f44c606cffb6bcdafb943f33cee49d0c5340a";
 } else {
-    ccPath = process.env["GOPATH"] + "/src/chaincode_example02";
+    //sample chaincoide ID 
+    chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
 }
 
 
-console.log("The chaincode is supposed to bet at:" + ccPath);
+init();
 
-// Read and process the credentials.json
-var network;
-try {
-    network = JSON.parse(fs.readFileSync(__dirname + '/ServiceCredentials.json', 'utf8'));
-} catch (err) {
-    console.log("ServiceCredentials.json is missing, Rerun once the file is available")
-    process.exit();
-}
+function init() {
 
-var peers = network.credentials.peers;
-var users = network.credentials.users;
 
-//Download the certificates from Bluemix
-var certFile = 'certificate.pem';
-var certUrl = network.credentials.cert;
-fs.access(certFile, function(err) {
-    if (!err) {
-        console.log("\nDeleting existing certificate ", certFile);
-        fs.unlinkSync(certFile);
+    // Create a client blockchin.
+    chain = hfc.newChain("BallotChain")
+
+    //path to copy the certificate
+    certPath = __dirname + "/src/chaincode/certificate.pem";
+
+    // Read and process the credentials.json
+    try {
+        network = JSON.parse(fs.readFileSync(__dirname + '/ServiceCredentials.json', 'utf8'));
+        if (network.credentials) network = network.credentials;
+    } catch (err) {
+        console.log("ServiceCredentials.json is missing or invalid file, Rerun the program with right file")
+        process.exit();
     }
 
-    downloadCertificate();
-});
+    peers = network.peers;
+    users = network.users;
 
-function downloadCertificate() {
-    var file = fs.createWriteStream(certFile);
-    var data = '';
-    https.get(certUrl, function(res) {
-        console.log('\nDownloading %s from %s', certFile, certUrl);
-        if (res.statusCode !== 200) {
-            console.log('\nDownload certificate failed, error code = %d', certFile, res.statusCode);
-            process.exit();
-        }
-        res.on('data', function(d) {
-            data += d;
-        });
-        // event received when certificate download is completed
-        res.on('end', function() {
-            if (process.platform != "win32") {
-                data += '\n';
-            }
-            fs.writeFileSync(certFile, data);
-            copyCertificate();
-        });
-    }).on('error', function(e) {
-        console.error(e);
-        process.exit();
-    });
+    setup();
+    printNetworkDetails();
+    enrollAdmin();
 }
-//copy the certificate.pem over to the chaincode folder 
-function copyCertificate() {
-    //fs.createReadStream('certificate.pem').pipe(fs.createWriteStream(ccPath+'/certificate.pem'));
-    fs.writeFileSync(ccPath + '/certificate.pem', fs.readFileSync(__dirname + '/certificate.pem'));
 
-    setTimeout(function() {
-        enrollAdmin();
-    }, 1000);
+//******************************Application parameters DONE**********************
+
+//*******************************Bluemix SETUP START ******************************
+
+function printNetworkDetails() {
+    console.log("\n------------- ca-server, peers and event URL:PORT information: -------------");
+    console.log("\nCA server Url : %s\n", caUrl);
+    for (var i = 0; i < peerUrls.length; i++) {
+        console.log("Validating Peer%d : %s", i, peerUrls[i]);
+    }
+    console.log("");
+    for (var i = 0; i < eventUrls.length; i++) {
+        console.log("Event Url on Peer%d : %s", i, eventUrls[i]);
+    }
+    console.log("");
+    console.log('-----------------------------------------------------------\n');
 }
 
 
-var network_id = Object.keys(network.credentials.ca);
-var uuid = network_id[0].substring(0, 8);
+function setup() {
+    // Determining if we are running on a startup or HSBN network based on the url
+    // of the discovery host name.  The HSBN will contain the string zone.
+    var isHSBN = peers[0].discovery_host.indexOf('secure') >= 0 ? true : false;
+    var network_id = Object.keys(network.ca);
+    caUrl = "grpcs://" + network.ca[network_id].discovery_host + ":" + network.ca[network_id].discovery_port;
 
-//keyValStore is local 
-chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
+    // Configure the KeyValStore which is used to store sensitive keys.
+    // This data needs to be located or accessible any time the users enrollmentID
+    // perform any functions on the blockchain.  The users are not usable without
+    // This data.
+    var uuid = network_id[0].substring(0, 8);
+    chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
 
-var admin;
-
-function enrollAdmin() {
-
-    // Set the URL for membership services
-    var ca_url = "grpcs://" + network.credentials.ca[network_id].discovery_host + ":" + network.credentials.ca[network_id].discovery_port;
+    if (isHSBN) {
+        certFile = '0.secure.blockchain.ibm.com.cert';
+    }
+    fs.createReadStream(certFile).pipe(fs.createWriteStream(certPath));
     var cert = fs.readFileSync(certFile);
-    chain.setMemberServicesUrl(ca_url, {
+
+    chain.setMemberServicesUrl(caUrl, {
         pem: cert
     });
 
+    peerUrls = [];
+    eventUrls = [];
     // Adding all the peers to blockchain
     // this adds high availability for the client
     for (var i = 0; i < peers.length; i++) {
-        chain.addPeer("grpcs://" + peers[i].discovery_host + ":" + peers[i].discovery_port, {
+        // Peers on Bluemix require secured connections, hence 'grpcs://'
+        peerUrls.push("grpcs://" + peers[i].discovery_host + ":" + peers[i].discovery_port);
+        chain.addPeer(peerUrls[i], {
+            pem: cert
+        });
+        eventUrls.push("grpcs://" + peers[i].event_host + ":" + peers[i].event_port);
+        chain.eventHubConnect(eventUrls[0], {
             pem: cert
         });
     }
+    // newUserName = config.user.username;
+    // Make sure disconnect the eventhub on exit
+    process.on('exit', function() {
+        chain.eventHubDisconnect();
+    });
+}
 
-    // console.log("\n\n------------- peers and caserver information: -------------");
-    // console.log(chain.getPeers());
-    // console.log(chain.getMemberServices());
-    // console.log('-----------------------------------------------------------\n\n');
+//*******************************Bluemix SETUP DONE ******************************
 
-    if (DEV_MODE) {
-        chain.setDevMode(true);
-        console.log("The chain is set to development mode");
-        //Deploy will not take long as the chain should already be running
-        chain.setDeployWaitTime(10);
-    } else {
-        // chain.setDeployWaitTime(120);
-    }
+//*******************************Admin SETUP START *******************************
 
-    //TODO: Register and enroll our own admin, instead of the hardcoded one in membersrvc.yaml! 
-    // var SuperAdmin = new Member(registrationRequest, chain);
-    // console.log(SuperAdmin);
+
+
+
+
+var admin;
+
+
+function enrollAdmin() {
+
     //enroll the admin 
-    console.log("Enrolling admin");
-    chain.enroll(users[0].username, users[0].secret, function(err, user) {
+    chain.enroll(users[0].enrollId, users[0].enrollSecret, function(err, user) {
         if (err) throw Error("\nERROR: failed to enroll admin : %s", err);
         // Set this user as the chain's registrar which is authorized to register other users.
         /*
@@ -152,61 +163,43 @@ function enrollAdmin() {
         admin = user;
         chain.setRegistrar(admin);
         // console.log(admin)
-        console.log("Admin is now enrolled.")
-
-        //TODO: have some kind of delay here as registering a new user won't work if done right away?
-
-        deploy();
+        console.log("Admin is now enrolled.");
+        deployChaincode();
     });
 }
+//*******************************Admin SETUP DONE *******************************
 
 
-
-
-
-//admin deploys the chaincode
-function deploy() {
-
-    console.log("Deploying chaincode ...");
+function deployChaincode() {
+    // var args = getArgs(config.deployRequest);
     // Construct the deploy request
-    var deployRequest;
-    if (USE_BLOCKVOTE_CC) {
-        deployRequest = {
-            // Function to trigger
-            fcn: "init",
-            // Arguments to the initializing function
-            args: ["Brexit Vote"],
-            certificatePath: "/certs/peer/cert.pem"
+    chain.setDeployWaitTime(240);
+    var deployRequest = {
+        // Function to trigger
+        fcn: "init",
+        // Arguments to the initializing function
+        args: ["Brexit Vote"],
+        chaincodePath: "BlockVoteChainCode/start",
+        // the location where the startup and HSBN store the certificates
+        certificatePath: network.cert_path
+    };
 
-        }
-        deployRequest.chaincodePath = "BlockVoteChainCode/start";
-    } else {
-        deployRequest = {
-            // Function to trigger
-            fcn: "init",
-            // Arguments to the initializing function
-            args: ["a", "100", "b", "200"],
-            certificatePath: "/certs/peer/cert.pem"
+    // Trigger the deploy transaction
+    var deployTx = admin.deploy(deployRequest);
 
-        }
-        deployRequest.chaincodePath = "chaincode_example02";
-    }
-
-    // Issue the deploy request and listen for events
-    // This does not mean that the chaincode docker image has been created in the peer, check the peer logs for this 
-    var tx = admin.deploy(deployRequest);
-    tx.on('complete', function(results) {
+    // Print the deploy results
+    deployTx.on('complete', function(results) {
         // Deploy request completed successfully
-        console.log("deploy complete; results: %j", results);
-        // Set the testChaincodeID for subsequent tests
         chaincodeID = results.chaincodeID;
-        console.log("record this Chaincode ID: " + chaincodeID);
-        // registerNewUser();
-
+        console.log("\nChaincode ID : " + chaincodeID);
+        console.log(util.format("\nSuccessfully deployed chaincode: request=%j, response=%j", deployRequest, results));
+        // Save the chaincodeID
+        fs.writeFileSync(chaincodeIDPath, chaincodeID);
     });
-    tx.on('error', function(error) {
-        console.log("Failed to deploy chaincode: request=%j, error=%k", deployRequest, error);
+
+    deployTx.on('error', function(err) {
+        // Deploy request failed
+        console.log(util.format("\nFailed to deploy chaincode: request=%j, error=%j", deployRequest, err));
         process.exit(1);
     });
-
 }

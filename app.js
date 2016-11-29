@@ -11,154 +11,150 @@ var util = require('util');
 var hfc = require('hfc');
 //Access directories 
 var fs = require('fs');
-const https = require('https');
+// const https = require('https');
+
+
+// var config;
+var chain;
+var network;
+var certPath;
+var peers;
+var users;
+// var userObj;
+// var newUserName;
+var chaincodeID;
+var certFile = 'us.blockchain.ibm.com.cert';
+// var chaincodeIDPath = __dirname + "/chaincodeID";
+
+
+var caUrl;
+var peerUrls = [];
+var EventUrls = [];
 
 //******************************Application parameters START**********************
 var USE_BLOCKVOTE_CC = true;
 var DEV_MODE = false;
-// Creating an environment variable for ciphersuites
-process.env['GRPC_SSL_CIPHER_SUITES'] = 'ECDHE-RSA-AES128-GCM-SHA256:' +
-    'ECDHE-RSA-AES128-SHA256:' +
-    'ECDHE-RSA-AES256-SHA384:' +
-    'ECDHE-RSA-AES256-GCM-SHA384:' +
-    'ECDHE-ECDSA-AES128-GCM-SHA256:' +
-    'ECDHE-ECDSA-AES128-SHA256:' +
-    'ECDHE-ECDSA-AES256-SHA384:' +
-    'ECDHE-ECDSA-AES256-GCM-SHA384';
-// Create a client blockchin.
-var chain = hfc.newChain("BallotChain")
 
-//Set the default chaincode path 
-var ccPath = "";
-if (USE_BLOCKVOTE_CC) {
-    ccPath = process.env["GOPATH"] + "/src/BlockVoteChainCode/start";
-} else {
-    ccPath = process.env["GOPATH"] + "/src/chaincode_example02";
-}
-console.log("The chaincode is supposed to bet at:" + ccPath);
-
-// Read and process the credentials.json
-var network;
-try {
-    network = JSON.parse(fs.readFileSync(__dirname + '/ServiceCredentials.json', 'utf8'));
-} catch (err) {
-    console.log("ServiceCredentials.json is missing, Rerun once the file is available")
-    process.exit();
-}
-
-var peers = network.credentials.peers;
-var users = network.credentials.users;
-
-
-var chaincodeID;
 if (USE_BLOCKVOTE_CC) {
     //Our chaincode, change this parameter if you are invoking your own 
     // chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
 
     //chaincode on the shared account 
-    chaincodeID = "a148fcad2fc0a66ee880d1feee0e31caf604aee24e7c5e39946fdbba17cb06ddd1746b6cca79dfb1aaee0c62a47f44c606cffb6bcdafb943f33cee49d0c5340a";
+    chaincodeID = "72efc6bbcad805c16a06abf49353dbb4ad0253cd510bff5a7f164a8bf12c13ec";
 } else {
     //sample chaincoide ID 
     chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
 }
+
+
+init();
+
+function init() {
+
+
+    // Create a client blockchin.
+    chain = hfc.newChain("BallotChain")
+
+    //path to copy the certificate
+    certPath = __dirname + "/src/chaincode/certificate.pem";
+
+    // Read and process the credentials.json
+    try {
+        network = JSON.parse(fs.readFileSync(__dirname + '/ServiceCredentials.json', 'utf8'));
+        if (network.credentials) network = network.credentials;
+    } catch (err) {
+        console.log("ServiceCredentials.json is missing or invalid file, Rerun the program with right file")
+        process.exit();
+    }
+
+    peers = network.peers;
+    users = network.users;
+
+    setup();
+    printNetworkDetails();
+    enrollAdmin();
+}
+
 //******************************Application parameters DONE**********************
 
 //*******************************Bluemix SETUP START ******************************
 
-
-
-//Andrei: what is this for?
-//Download the certificates from Bluemix
-var certFile = 'certificate.pem';
-var certUrl = network.credentials.cert;
-fs.access(certFile, function(err) {
-    if (!err) {
-        console.log("\nDeleting existing certificate ", certFile);
-        fs.unlinkSync(certFile);
+function printNetworkDetails() {
+    console.log("\n------------- ca-server, peers and event URL:PORT information: -------------");
+    console.log("\nCA server Url : %s\n", caUrl);
+    for (var i = 0; i < peerUrls.length; i++) {
+        console.log("Validating Peer%d : %s", i, peerUrls[i]);
     }
+    console.log("");
+    for (var i = 0; i < eventUrls.length; i++) {
+        console.log("Event Url on Peer%d : %s", i, eventUrls[i]);
+    }
+    console.log("");
+    console.log('-----------------------------------------------------------\n');
+}
 
-    downloadCertificate();
-});
 
-function downloadCertificate() {
-    var file = fs.createWriteStream(certFile);
-    var data = '';
-    https.get(certUrl, function(res) {
-        console.log('\nDownloading %s from %s', certFile, certUrl);
-        if (res.statusCode !== 200) {
-            console.log('\nDownload certificate failed, error code = %d', certFile, res.statusCode);
-            process.exit();
-        }
-        res.on('data', function(d) {
-            data += d;
+function setup() {
+    // Determining if we are running on a startup or HSBN network based on the url
+    // of the discovery host name.  The HSBN will contain the string zone.
+    var isHSBN = peers[0].discovery_host.indexOf('secure') >= 0 ? true : false;
+    var network_id = Object.keys(network.ca);
+    caUrl = "grpcs://" + network.ca[network_id].discovery_host + ":" + network.ca[network_id].discovery_port;
+
+    // Configure the KeyValStore which is used to store sensitive keys.
+    // This data needs to be located or accessible any time the users enrollmentID
+    // perform any functions on the blockchain.  The users are not usable without
+    // This data.
+    var uuid = network_id[0].substring(0, 8);
+    chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
+
+    if (isHSBN) {
+        certFile = '0.secure.blockchain.ibm.com.cert';
+    }
+    fs.createReadStream(certFile).pipe(fs.createWriteStream(certPath));
+    var cert = fs.readFileSync(certFile);
+
+    chain.setMemberServicesUrl(caUrl, {
+        pem: cert
+    });
+
+    peerUrls = [];
+    eventUrls = [];
+    // Adding all the peers to blockchain
+    // this adds high availability for the client
+    for (var i = 0; i < peers.length; i++) {
+        // Peers on Bluemix require secured connections, hence 'grpcs://'
+        peerUrls.push("grpcs://" + peers[i].discovery_host + ":" + peers[i].discovery_port);
+        chain.addPeer(peerUrls[i], {
+            pem: cert
         });
-        // event received when certificate download is completed
-        res.on('end', function() {
-            if (process.platform != "win32") {
-                data += '\n';
-            }
-            fs.writeFileSync(certFile, data);
-            copyCertificate();
+        eventUrls.push("grpcs://" + peers[i].event_host + ":" + peers[i].event_port);
+        chain.eventHubConnect(eventUrls[0], {
+            pem: cert
         });
-    }).on('error', function(e) {
-        console.error(e);
-        process.exit();
+    }
+    // newUserName = config.user.username;
+    // Make sure disconnect the eventhub on exit
+    process.on('exit', function() {
+        chain.eventHubDisconnect();
     });
 }
-//copy the certificate.pem over to the chaincode folder 
-function copyCertificate() {
-    //fs.createReadStream('certificate.pem').pipe(fs.createWriteStream(ccPath+'/certificate.pem'));
-    fs.writeFileSync(ccPath + '/certificate.pem', fs.readFileSync(__dirname + '/certificate.pem'));
 
-    setTimeout(function() {
-        enrollAdmin();
-    }, 1000);
-}
-var network_id = Object.keys(network.credentials.ca);
-var uuid = network_id[0].substring(0, 8);
 //*******************************Bluemix SETUP DONE ******************************
 
 //*******************************Admin SETUP START *******************************
 
-//keyValStore is local 
-chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
+
+
+
 
 var admin;
 
+
 function enrollAdmin() {
 
-    // Set the URL for membership services
-    var ca_url = "grpcs://" + network.credentials.ca[network_id].discovery_host + ":" + network.credentials.ca[network_id].discovery_port;
-    var cert = fs.readFileSync(certFile);
-    chain.setMemberServicesUrl(ca_url, {
-        pem: cert
-    });
-
-    // Adding all the peers to blockchain
-    // this adds high availability for the client
-    for (var i = 0; i < peers.length; i++) {
-        chain.addPeer("grpcs://" + peers[i].discovery_host + ":" + peers[i].discovery_port, {
-            pem: cert
-        });
-    }
-
-
-    if (DEV_MODE) {
-        chain.setDevMode(true);
-        console.log("The chain is set to development mode");
-        //Deploy will not take long as the chain should already be running
-        chain.setDeployWaitTime(10);
-    } else {
-        // chain.setDeployWaitTime(120);
-    }
-
-    //TODO: Register and enroll our own admin, instead of the hardcoded one in membersrvc.yaml! 
-    // var SuperAdmin = new Member(registrationRequest, chain);
-    // console.log(SuperAdmin);
     //enroll the admin 
-    console.log("Enrolling admin");
-    console.log(users[0].username + " " + users[0].secret)
-    chain.enroll(users[0].username, users[0].secret, function(err, user) {
+    chain.enroll(users[0].enrollId, users[0].enrollSecret, function(err, user) {
         if (err) throw Error("\nERROR: failed to enroll admin : %s", err);
         // Set this user as the chain's registrar which is authorized to register other users.
         /*
@@ -173,101 +169,32 @@ function enrollAdmin() {
 //*******************************Admin SETUP DONE *******************************
 
 
-
-//*******************************USER Registration/Enrollment START ********************
-function registerUser(id, userTransaction, res) {
-    var enrollmentID = id;
-    var registrationRequest = {
-        enrollmentID: enrollmentID, //recorded under 'name' of the Member, this is the only parameter set in member object in the chain object
-        attributes: [], //what are the attributes for?
-        name: enrollmentID + "Name", //this does not get used at all in chain object or member services 
-        roles: ["client"], //this is role in Member Services, choices are ["client","peer","validator","auditor"]
-        account: "group1", //this affiliation in Member Services 
-        affiliation: "00002" //this is affiliationRole in Member Services
-
-    };
-    console.log(userTransaction);
-    console.log("Now registering: " + registrationRequest.name);
-
-
-    chain.register(registrationRequest, function(err, enrollmentSecret) {
-        if (err) {
-            res.end("Failed to enroll " + id + ": " + err);
-            // throw Error("Failed to register " + registrationRequest.name + ": " + err);
-            console.log("Failed to register " + registrationRequest.name + ": " + err);
-
-        }
-        console.log("Succesfully registered " + registrationRequest.name);
-        registrationRequest.enrollmentSecret = enrollmentSecret;
-        //At this point, 'registration' only enables this person to enroll
-
-        enrollUser(registrationRequest.enrollmentID, registrationRequest.enrollmentSecret, userTransaction, res);
-
-    });
-
-}
-
-function enrollUser(id, secret, userTransaction, res) {
-
-    console.log("Now enrolling: " + id);
-    chain.enroll(id, secret,
-        function(err, member) {
-            if (err) {
-                res.end("Failed to enroll " + id + ": " + err);
-                // throw Error("Failed to enroll " + id + ": " + err);
-                console.log("Failed to enroll " + id + ": " + err);
-                return;
-
-            }
-
-            console.log("Succesfully enrolled " + id);
-            //User invokes the chaincode
-            console.log(id + " wants to " + userTransaction.type);
-            console.log(userTransaction);
-            if (userTransaction.type == "invoke") {
-                invokeChainCode(member, userTransaction.vote, res);
-                return;
-            }
-            if (userTransaction.type == "query") {
-                queryChainCode(member, res);
-                return;
-            }
-            if (userTransaction.type == "queryResults") {
-                queryResultsChaincode(member, res);
-                return;
-            }
-
-        }
-    );
-}
-//*******************************USER Registration/Enrollment DONE ********************
-
 //*******************************Transaction functions START ********************
-function invokeChainCode(member, vote, res) {
-    console.log(member.name + " is invoking chaincode...");
+function invokeChainCode(voter, vote, res) {
+    console.log("Andrei is invoking chaincode...");
     var invokeRequest = {
         chaincodeID: chaincodeID,
         fcn: "write",
-        args: [member.name, vote]
+        args: [voter, vote]
     };
 
 
     // Trigger the invoke transaction
-    var invokeTx = member.invoke(invokeRequest);
+    var invokeTx = admin.invoke(invokeRequest);
 
     // Print the invoke results
     invokeTx.on('submitted', function(results) {
         // Invoke transaction submitted successfully
-        console.log(util.format("\n%s Successfully submitted chaincode invoke transaction: request=%j, response=%j", member.name, invokeRequest, results));
+        console.log(util.format("\n%s Successfully submitted chaincode invoke transaction: request=%j, response=%j", voter, invokeRequest, results));
     });
     invokeTx.on('complete', function(results) {
         // Invoke transaction completed successfully
-        console.log(util.format("\n%s Successfully completed chaincode invoke transaction: request=%j, response=%j", member.name, invokeRequest, results));
+        console.log(util.format("\n%s Successfully completed chaincode invoke transaction: request=%j, response=%j", voter, invokeRequest, results));
         res.end('You have succesfully voted! You can review your vote with the "Review Vote" action');
     });
     invokeTx.on('error', function(err) {
         // Invoke transaction submission failed
-        console.log(util.format("\n%s Failed to submit chaincode invoke transaction: request=%j, error=%j", member.name, invokeRequest, err));
+        console.log(util.format("\n%s Failed to submit chaincode invoke transaction: request=%j, error=%j", voter, invokeRequest, err));
         res.end("Sorry, your submission has failed. Please contact the system administrator.");
     });
     //End the response proces 
@@ -275,8 +202,8 @@ function invokeChainCode(member, vote, res) {
 
 }
 
-function queryChainCode(member, res) {
-    console.log(member.name + " is querying chaincode...");
+function queryChainCode(voter, res) {
+    console.log(voter + " is querying chaincode...");
     // Construct the query request
     var queryRequest = {
         // Name (hash) required for query
@@ -284,21 +211,27 @@ function queryChainCode(member, res) {
         // Function to trigger
         fcn: "read",
         // Existing state variable to retrieve
-        args: [member.name]
+        args: [voter]
     }
 
     // Trigger the query transaction
-    var queryTx = member.query(queryRequest);
+    var queryTx = admin.query(queryRequest);
 
     // Print the query results
     queryTx.on('complete', function(results) {
         // Query completed successfully
-        console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
-        res.end(member.name + " has voted " + results.result.toString());
+        console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", voter, queryRequest, results.result.toString());
+        console.log(results);
+        if (results.result.toString() == "yes") {
+            res.end(voter + " wants UK to leave the EU.");
+        } else {
+            res.end(voter + " wants UK to stay in the EU.");
+        }
+
     });
     queryTx.on('error', function(err) {
         // Query failed
-        console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
+        console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", voter, queryRequest, err);
         res.end("Sorry, your query has failed. Please contact the system administrator");
     });
 }
@@ -338,7 +271,7 @@ function queryResultsChaincode(member, res) {
         // Query completed successfully
         console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
         //res.end(member.name + " has voted " + results.result.toString());
-        
+
 
         // ask for no votes
         var noQuery = member.query(queryRequest);
@@ -347,7 +280,7 @@ function queryResultsChaincode(member, res) {
         noQuery.on('complete', function(results) {
             // Query completed successfully
             console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
-            
+
             //TODONOW: Figure out how to send two numbers to the plukash
             res.end("two numbers sent to you");
         });
@@ -385,10 +318,9 @@ app.use(express.static(__dirname + '/public'));
 var hostname = 'localhost';
 var port = 3000;
 app.listen(port, hostname, function() {
-    console.log(`Server running at http://${hostname}:${port}/`);
+    console.log(`WebServer running at http://${hostname}:${port}/`);
 });
 
-//TODO: Enable selection of ElectionChaincode 
 
 app.post('/vote', function(req, res) {
     console.log("enrollmentID: " + req.body.enrollmentID + " vote: " + req.body.vote + " invokes.");
@@ -398,7 +330,7 @@ app.post('/vote', function(req, res) {
         vote: req.body.vote
     }
     var id = req.body.enrollmentID.replace(/ +/g, "");
-    registerUser(id, userTransaction, res);
+    invokeChainCode(id, req.body.vote, res);
 });
 
 app.post('/query', function(req, res) {
@@ -408,7 +340,7 @@ app.post('/query', function(req, res) {
         type: "query"
     }
     var id = req.body.enrollmentID.replace(/ +/g, "");
-    registerUser(id, userTransaction, res);
+    queryChainCode(id, res);
 });
 
 app.get('queryresults', function(req, res) {
