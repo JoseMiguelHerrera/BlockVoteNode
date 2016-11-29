@@ -94,7 +94,7 @@ var queryFormhandler = function() {
 }
 
 var queryResultsHandler = function() {
-
+    console.log("enter the results handler");
     //Start the querying animation 
     $('.optionCanvas').empty();
     $('.optionCanvas').append(loadingPageAnimation);
@@ -112,12 +112,22 @@ var queryResultsHandler = function() {
     });
 }
 
-var showResultsHandler(data) {
-    //TODO:Use D3.js on the data 
-    //TODO: fix the query to the blockchain
+var showResultsHandler = function(data) {
+    //TODO:Use D3.js on the data     
+    var temp = data.split(" ");
+    var yesVotes = parseInt(temp[0], 10);
+    var noVotes = parseInt(temp[1], 10);
     $('.optionCanvas').empty();
-    var response = "<p>" + data + "</p>";
-    $('.optionCanvas').append(response);
+    if (yesVotes >= noVotes) {
+        var response1 = '<h3 class="redc">There are ' + yesVotes + " people who want UK to leave the EU</h3>";
+        var response2 = '<h5>There are ' + noVotes + " people who want UK to stay in the EU </h5>";
+        $('.optionCanvas').append(response1).append(response2);
+    } else {
+        var response2 = '<h3 class="redc">There are ' + noVotes + " people who want UK to stay in the EU </h3>";
+        var response1 = '<h5>There are ' + yesVotes + " people who want UK to leave the EU</h5>";
+        $('.optionCanvas').append(response2).append(response1);
+    }
+
     // console.log('Finished submitting');
 }
 

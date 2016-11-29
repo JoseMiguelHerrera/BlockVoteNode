@@ -210,7 +210,7 @@ function queryChainCode(voter, res) {
         chaincodeID: chaincodeID,
         // Function to trigger
         fcn: "read",
-        // Existing state variable to retrieve
+        // Existing state vasriable to retrieve
         args: [voter]
     }
 
@@ -224,8 +224,10 @@ function queryChainCode(voter, res) {
         console.log(results);
         if (results.result.toString() == "yes") {
             res.end(voter + " wants UK to leave the EU.");
-        } else {
+        } if (results.result.toString() == "no") {
             res.end(voter + " wants UK to stay in the EU.");
+        }else {
+            res.end(voter + " has not voted yet.");
         }
 
     });
@@ -237,9 +239,9 @@ function queryChainCode(voter, res) {
 }
 
 
-//This is specific to Blockchain 
-function queryResultsChaincode(member, res) {
-    console.log("Querying results of election...");
+//This is specific to the Brexit referendum
+function queryResultsChaincode(res) {
+    console.log("Querying results of Brexit referendum...");
 
     //ask for number of yes 
     var yesQueryRequest = {
@@ -262,38 +264,47 @@ function queryResultsChaincode(member, res) {
         args: ["noVotes"]
     }
 
+    var yesCount;
+    var noCount;
 
     // ask for yes votes 
-    var yesQuery = member.query(yesQueryRequest);
+    var yesQuery = admin.query(yesQueryRequest);
 
     // Print the query results
     yesQuery.on('complete', function(results) {
         // Query completed successfully
-        console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
-        //res.end(member.name + " has voted " + results.result.toString());
-
+        console.log("\n Successfully queried yes results of Brexit: request=%j, yes votes = %s", yesQueryRequest, results.result.toString());
+        yesCount = results.result.toString();
 
         // ask for no votes
-        var noQuery = member.query(queryRequest);
+        var noQuery = admin.query(noQueryRequest);
 
         // Print the query results
         noQuery.on('complete', function(results) {
             // Query completed successfully
-            console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
+            console.log("\n Successfully queried no results of Brexit: request=%j, no votes = %s", noQueryRequest, results.result.toString());
 
+            noCount = results.result.toString();
             //TODONOW: Figure out how to send two numbers to the plukash
-            res.end("two numbers sent to you");
+            //I will have to send it as a string separated by a space 
+
+            //Example:"9 10", I have to conver this into a number at the frount end
+            var BrexitResults = "";
+            BrexitResults += yesCount + " " + noCount;
+
+            //can I send numbers through here?
+            res.end(BrexitResults);
         });
         noQuery.on('error', function(err) {
             // Query failed
-            console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
+            console.log("Failed to query results of Brexit referendum: request=%j, error=%j", noQueryRequest, err);
             res.end("Sorry, your requests for results has failed. Please contact the system administrator");
         });
 
     });
     yesQuery.on('error', function(err) {
         // Query failed
-        console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
+        cconsole.log("Failed to query results of Brexit referendum: request=%j, error=%j", yesQueryRequest, err);
         res.end("Sorry, your requests for results has failed. Please contact the system administrator");
     });
 
@@ -325,10 +336,6 @@ app.listen(port, hostname, function() {
 app.post('/vote', function(req, res) {
     console.log("enrollmentID: " + req.body.enrollmentID + " vote: " + req.body.vote + " invokes.");
     //Call the invoke 
-    var userTransaction = {
-        type: "invoke",
-        vote: req.body.vote
-    }
     var id = req.body.enrollmentID.replace(/ +/g, "");
     invokeChainCode(id, req.body.vote, res);
 });
@@ -336,21 +343,14 @@ app.post('/vote', function(req, res) {
 app.post('/query', function(req, res) {
     console.log("enrollmentID: " + req.body.enrollmentID + " query.");
     //Call the query 
-    var userTransaction = {
-        type: "query"
-    }
     var id = req.body.enrollmentID.replace(/ +/g, "");
     queryChainCode(id, res);
 });
 
-app.get('queryresults', function(req, res) {
-    console.log("enrollmentID: " + req.body.enrollmentID + " query.");
-    //Call the query 
-    var userTransaction = {
-        type: "queryResults"
-    }
-
-    enrollUser(users[0].username, users[0].secret, userTransaction, res);
+//This is only for Brexit referendum 
+app.get('/queryresults', function(req, res) {
+    //get the results of the refrendum 
+    queryResultsChaincode(res);
 })
 
 // app.post('/', function(req, res){

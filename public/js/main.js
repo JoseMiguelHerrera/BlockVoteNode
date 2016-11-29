@@ -4,34 +4,6 @@ var Votingform = '\n <!-- Voting form-->\n\n    <form id="votingform">\n        
 
 var Queryform = '\n    <!-- Query form -->\n    <form id="queryform">\n        <div class="row">\n            <div class="six columns">\n                <label for="exampleName">Enter your name</label>\n                <input name="enrollmentID" class="u-full-width" placeholder="John Snow" id="exampleName">\n            </div>\n        </div>\n        <!-- Submit button -->\n        <input class="button-primary" type="submit" value="Query">\n        <div class="feedback"></div>\n    </form>\n';
 
-var ResultsSection = '\n     <div class="results">\n        Reviewing of results is not avaible yet.\n        <div class="feedback"></div>\n    </div>\n';
-
-var queryFormhandler = function queryFormhandler() {
-    //Error checking 
-    if (!$('input[name=enrollmentID]').val()) {
-        window.alert("Please enter your name");
-    }
-    var submitData = {
-        'enrollmentID': $('input[name=enrollmentID]').val()
-    };
-
-    //Start the querying animation 
-    $('.optionCanvas').empty();
-    $('.optionCanvas').append(loadingPageAnimation);
-    //Submit the vote using JQuery AJAX 
-    $.ajax({
-        type: 'POST',
-        url: URLquery,
-        data: submitData
-    }).done(function (data) {
-        $('.optionCanvas').empty();
-        var response = "<p>" + data + "</p>";
-        $('.optionCanvas').append(response);
-        // console.log('Finished submitting');
-        console.log(data);
-    });
-};
-
 var brexitElection = '\n    <div class="row electionChoices">\n            <p>Should the UK remain a member of the EU or leave the EU?</p>\n            <input type="radio" name="vote" value="yes"> Leave EU\n            <br>\n            <input type="radio" name="vote" value="no"> Remain a member of the EU</div>\n';
 
 var laptopElection = '\n    <div>\n        <p> Laptop Election is not available yet.</p>\n    </div>\n';
@@ -75,8 +47,74 @@ var laptopElectionHandler = function laptopElectionHandler() {};
 
 var cuisineElectionHandler = function cuisineElectionHandler() {};
 
+var queryFormhandler = function queryFormhandler() {
+    //Error checking 
+    if (!$('input[name=enrollmentID]').val()) {
+        window.alert("Please enter your name");
+    }
+    var submitData = {
+        'enrollmentID': $('input[name=enrollmentID]').val()
+    };
+
+    //Start the querying animation 
+    $('.optionCanvas').empty();
+    $('.optionCanvas').append(loadingPageAnimation);
+    //Submit the vote using JQuery AJAX 
+    $.ajax({
+        type: 'POST',
+        url: URLquery,
+        data: submitData
+    }).done(function (data) {
+        $('.optionCanvas').empty();
+        var response = "<p>" + data + "</p>";
+        $('.optionCanvas').append(response);
+        // console.log('Finished submitting');
+        console.log(data);
+    });
+};
+
+var queryResultsHandler = function queryResultsHandler() {
+    console.log("enter the results handler");
+    //Start the querying animation 
+    $('.optionCanvas').empty();
+    $('.optionCanvas').append(loadingPageAnimation);
+
+    $.ajax({
+        type: 'GET',
+        url: URLQueryResults
+    }).done(function (data) {
+
+        showResultsHandler(data);
+
+        //for debugging 
+        console.log(data);
+    });
+};
+
+var showResultsHandler = function showResultsHandler(data) {
+    //TODO:Use D3.js on the data     
+    var temp = data.split(" ");
+    var yesVotes = parseInt(temp[0], 10);
+    var noVotes = parseInt(temp[1], 10);
+    $('.optionCanvas').empty();
+    if (yesVotes >= noVotes) {
+        var response1 = '<h3 class="redc">There are ' + yesVotes + " people who want UK to leave the EU</h3>";
+        var response2 = '<h5>There are ' + noVotes + " people who want UK to stay in the EU </h5>";
+        $('.optionCanvas').append(response1).append(response2);
+    } else {
+        var response2 = '<h3 class="redc">There are ' + noVotes + " people who want UK to stay in the EU </h3>";
+        var response1 = '<h5>There are ' + yesVotes + " people who want UK to leave the EU</h5>";
+        $('.optionCanvas').append(response2).append(response1);
+    }
+
+    // console.log('Finished submitting');
+};
+
+var ResultsSection = '\n     <div class="results">\n        Reviewing of results is not avaible yet.\n        <div class="feedback"></div>\n    </div>\n';
+
 var URLvote = "http://localhost:3000/vote";
 var URLquery = "http://localhost:3000/query";
+var URLQueryResults = "http://localhost:3000/queryresults";
 
 $(document).ready(function () {
 
@@ -104,6 +142,8 @@ $(document).ready(function () {
             if (this.id == "queryform") {
                 queryFormhandler();
             }
+
+            // if(this.id == "")
 
             event.preventDefault();
         });
@@ -161,7 +201,12 @@ var setClicked = function setClicked() {
 
     if (action == "ReviewResults") {
         console.log("Display review results");
-        $('.optionCanvas').empty();
-        $('.optionCanvas').append(ResultsSection);
+
+        if (electionType == "Brexit") {
+            queryResultsHandler();
+        } else {
+            $('.optionCanvas').empty();
+            $('.optionCanvas').append(ResultsSection);
+        }
     }
 };

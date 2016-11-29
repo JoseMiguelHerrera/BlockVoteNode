@@ -11,3 +11,7 @@ input.button-primary {
 
 div.optionCanvas {
   margin: 0 50px 50px 50px; }
+
+.redc {
+  color: red;
+  font-weight: bold; }
