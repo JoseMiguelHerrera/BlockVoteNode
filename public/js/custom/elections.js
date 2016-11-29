@@ -64,3 +64,67 @@ var brexitElectionHandler = function() {
 var laptopElectionHandler = function() {};
 
 var cuisineElectionHandler = function() {};
+
+var queryFormhandler = function() {
+    //Error checking 
+    if (!$('input[name=enrollmentID]').val()) {
+        window.alert("Please enter your name");
+    }
+    var submitData = {
+        'enrollmentID': $('input[name=enrollmentID]').val()
+    }
+
+    //Start the querying animation 
+    $('.optionCanvas').empty();
+    $('.optionCanvas').append(loadingPageAnimation);
+    //Submit the vote using JQuery AJAX 
+    $.ajax({
+        type: 'POST',
+        url: URLquery,
+        data: submitData
+    }).done(function(data) {
+        $('.optionCanvas').empty();
+        var response = "<p>" + data + "</p>";
+        $('.optionCanvas').append(response);
+        // console.log('Finished submitting');
+        console.log(data);
+
+    });
+
+}
+
+var queryResultsHandler = function() {
+
+    //Start the querying animation 
+    $('.optionCanvas').empty();
+    $('.optionCanvas').append(loadingPageAnimation);
+
+    $.ajax({
+        type: 'GET',
+        url: URLQueryResults
+    }).done(function(data) {
+
+        showResultsHandler(data);
+
+        //for debugging 
+        console.log(data);
+
+    });
+}
+
+var showResultsHandler(data) {
+    //TODO:Use D3.js on the data 
+    //TODO: fix the query to the blockchain
+    $('.optionCanvas').empty();
+    var response = "<p>" + data + "</p>";
+    $('.optionCanvas').append(response);
+    // console.log('Finished submitting');
+}
+
+
+var ResultsSection = `
+     <div class="results">
+        Reviewing of results is not avaible yet.
+        <div class="feedback"></div>
+    </div>
+`;

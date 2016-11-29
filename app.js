@@ -53,7 +53,10 @@ var users = network.credentials.users;
 var chaincodeID;
 if (USE_BLOCKVOTE_CC) {
     //Our chaincode, change this parameter if you are invoking your own 
-    chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
+    // chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
+
+    //chaincode on the shared account 
+    chaincodeID = "a148fcad2fc0a66ee880d1feee0e31caf604aee24e7c5e39946fdbba17cb06ddd1746b6cca79dfb1aaee0c62a47f44c606cffb6bcdafb943f33cee49d0c5340a";
 } else {
     //sample chaincoide ID 
     chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
@@ -154,6 +157,7 @@ function enrollAdmin() {
     // console.log(SuperAdmin);
     //enroll the admin 
     console.log("Enrolling admin");
+    console.log(users[0].username + " " + users[0].secret)
     chain.enroll(users[0].username, users[0].secret, function(err, user) {
         if (err) throw Error("\nERROR: failed to enroll admin : %s", err);
         // Set this user as the chain's registrar which is authorized to register other users.
@@ -188,8 +192,10 @@ function registerUser(id, userTransaction, res) {
 
     chain.register(registrationRequest, function(err, enrollmentSecret) {
         if (err) {
-            throw Error("Failed to register " + registrationRequest.name + ": " + err);
             res.end("Failed to enroll " + id + ": " + err);
+            // throw Error("Failed to register " + registrationRequest.name + ": " + err);
+            console.log("Failed to register " + registrationRequest.name + ": " + err);
+
         }
         console.log("Succesfully registered " + registrationRequest.name);
         registrationRequest.enrollmentSecret = enrollmentSecret;
@@ -207,8 +213,11 @@ function enrollUser(id, secret, userTransaction, res) {
     chain.enroll(id, secret,
         function(err, member) {
             if (err) {
-                throw Error("Failed to enroll " + id + ": " + err);
                 res.end("Failed to enroll " + id + ": " + err);
+                // throw Error("Failed to enroll " + id + ": " + err);
+                console.log("Failed to enroll " + id + ": " + err);
+                return;
+
             }
 
             console.log("Succesfully enrolled " + id);
@@ -221,6 +230,10 @@ function enrollUser(id, secret, userTransaction, res) {
             }
             if (userTransaction.type == "query") {
                 queryChainCode(member, res);
+                return;
+            }
+            if (userTransaction.type == "queryResults") {
+                queryResultsChaincode(member, res);
                 return;
             }
 
@@ -281,13 +294,77 @@ function queryChainCode(member, res) {
     queryTx.on('complete', function(results) {
         // Query completed successfully
         console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
-        res.end(member.name + " has voted "+ results.result.toString());
+        res.end(member.name + " has voted " + results.result.toString());
     });
     queryTx.on('error', function(err) {
         // Query failed
         console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
         res.end("Sorry, your query has failed. Please contact the system administrator");
     });
+}
+
+
+//This is specific to Blockchain 
+function queryResultsChaincode(member, res) {
+    console.log("Querying results of election...");
+
+    //ask for number of yes 
+    var yesQueryRequest = {
+        // Name (hash) required for query
+        chaincodeID: chaincodeID,
+        // Function to trigger
+        fcn: "read",
+        // Existing state variable to retrieve
+        args: ["yesVotes"]
+    }
+
+
+    //ask for number of no 
+    var noQueryRequest = {
+        // Name (hash) required for query
+        chaincodeID: chaincodeID,
+        // Function to trigger
+        fcn: "read",
+        // Existing state variable to retrieve
+        args: ["noVotes"]
+    }
+
+
+    // ask for yes votes 
+    var yesQuery = member.query(yesQueryRequest);
+
+    // Print the query results
+    yesQuery.on('complete', function(results) {
+        // Query completed successfully
+        console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
+        //res.end(member.name + " has voted " + results.result.toString());
+        
+
+        // ask for no votes
+        var noQuery = member.query(queryRequest);
+
+        // Print the query results
+        noQuery.on('complete', function(results) {
+            // Query completed successfully
+            console.log("\n%s Successfully queried  chaincode function: request=%j, value=%s", member.name, queryRequest, results.result.toString());
+            
+            //TODONOW: Figure out how to send two numbers to the plukash
+            res.end("two numbers sent to you");
+        });
+        noQuery.on('error', function(err) {
+            // Query failed
+            console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
+            res.end("Sorry, your requests for results has failed. Please contact the system administrator");
+        });
+
+    });
+    yesQuery.on('error', function(err) {
+        // Query failed
+        console.log("\n%s Failed to query chaincode, function: request=%j, error=%j", member.name, queryRequest, err);
+        res.end("Sorry, your requests for results has failed. Please contact the system administrator");
+    });
+
+
 }
 
 //*******************************Transaction functions DONE ********************
@@ -333,6 +410,16 @@ app.post('/query', function(req, res) {
     var id = req.body.enrollmentID.replace(/ +/g, "");
     registerUser(id, userTransaction, res);
 });
+
+app.get('queryresults', function(req, res) {
+    console.log("enrollmentID: " + req.body.enrollmentID + " query.");
+    //Call the query 
+    var userTransaction = {
+        type: "queryResults"
+    }
+
+    enrollUser(users[0].username, users[0].secret, userTransaction, res);
+})
 
 // app.post('/', function(req, res){
 //     console.log("enrollmentID: " + req.body.enrollmentID + " " + req.body.action);

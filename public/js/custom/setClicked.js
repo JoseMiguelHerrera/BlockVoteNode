@@ -48,7 +48,15 @@ var setClicked = function() {
 
     if (action == "ReviewResults") {
         console.log("Display review results");
-        $('.optionCanvas').empty();
-        $('.optionCanvas').append(ResultsSection);
+       
+
+        //Review results right away
+        //Send the request to the Node.js server
+        //Start animation
+        //Show the visualization using D3.js 
+        queryResultsHandler();
+
+        // $('.optionCanvas').empty();
+        // $('.optionCanvas').append(ResultsSection);
     }
 }

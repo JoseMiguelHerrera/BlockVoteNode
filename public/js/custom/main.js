@@ -1,5 +1,6 @@
 var URLvote = "http://localhost:3000/vote"
 var URLquery = "http://localhost:3000/query";
+var URLQueryResults = "http://localhost:3000/queryresults";
 
 $(document).ready(function() {
 
@@ -27,6 +28,9 @@ $(document).ready(function() {
             if(this.id == "queryform"){
                 queryFormhandler(); 
             }
+
+            
+            // if(this.id == "")
 
             event.preventDefault();
         });
