@@ -40,7 +40,8 @@ if (USE_BLOCKVOTE_CC) {
     // chaincodeID = "2434f1ebde11cea2af044b173d2b4420a5a2213b898a178b6fc8c201c12bab85";
 
     //chaincode on the shared account 
-    chaincodeID = "72efc6bbcad805c16a06abf49353dbb4ad0253cd510bff5a7f164a8bf12c13ec";
+    chaincodeID = "ecd9c460c09194ec0bdfce617305350acb2a8eb236a8912f8aa6b461e4bd762a";
+    // chaincodeID = "72efc6bbcad805c16a06abf49353dbb4ad0253cd510bff5a7f164a8bf12c13ec";
 } else {
     //sample chaincoide ID 
     chaincodeID = "36424ebc2d3dc8ab4959126f162789b4a2f614873990086bceb5367fabde0e9b";
@@ -189,13 +190,15 @@ function invokeChainCode(voter, vote, res) {
     });
     invokeTx.on('complete', function(results) {
         // Invoke transaction completed successfully
+        // console.log();
         console.log(util.format("\n%s Successfully completed chaincode invoke transaction: request=%j, response=%j", voter, invokeRequest, results));
         res.end('You have succesfully voted! You can review your vote with the "Review Vote" action');
     });
     invokeTx.on('error', function(err) {
         // Invoke transaction submission failed
         console.log(util.format("\n%s Failed to submit chaincode invoke transaction: request=%j, error=%j", voter, invokeRequest, err));
-        res.end("Sorry, your submission has failed. Please contact the system administrator.");
+        // res.end("Sorry, your submission has failed. Please contact the system administrator.");
+        res.end("Sorry we cannot overwrite your previous vote.");
     });
     //End the response proces 
     // res.end();
