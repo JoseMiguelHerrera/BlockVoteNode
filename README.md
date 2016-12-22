@@ -10,8 +10,8 @@
 - [X] Register and enroll voters
 - [X] Register and enroll hardcoded voters
 - [X] Prettify the demo 
-- [ ] Serve election results back to voters  
-- [ ] Upload the Node.js and frontend to Bluemix 
+- [X] Serve election results back to voters  
+- [ ] Upload the application to Bluemix 
 
 **Resource**
  - Read this to see the methods in HFC: github.com/hyperledger/fabric/sdk/node/lib/hfc.js
