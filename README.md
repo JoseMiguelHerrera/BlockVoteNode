@@ -1,21 +1,14 @@
-**Overview**
-=============
-- Create a referendum
-- Register and enroll the participant 
-- Enter each participant's vote on the Blockchain
-- Count the votes in the Blockchain
-- Present the results of the referendum 
+# Node.js Starter Overview
 
-**Milestones**
-- [X] Register and enroll voters
-- [X] Register and enroll hardcoded voters
-- [X] Prettify the demo 
-- [X] Serve election results back to voters  
-- [ ] Upload the application to Bluemix 
+The Node.js Starter demonstrates a simple, reusable Node.js web application based on the Express framework.
 
-**Resource**
- - Read this to see the methods in HFC: github.com/hyperledger/fabric/sdk/node/lib/hfc.js
+## Run the app locally
 
-**Notes**
-- For now, the app will work locally and connect to an IBM Blockchain Service on Bluemix
-- Copy your spefic service credentials to ServiceCredentials.json  
+1. [Install Node.js][]
+2. Download and extract the starter code from the Bluemix UI
+3. cd into the app directory
+4. Run `npm install` to install the app's dependencies
+5. Run `npm start` to start the app
+6. Access the running app in a browser at http://localhost:6001
+
+[Install Node.js]: https://nodejs.org/en/download/

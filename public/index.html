@@ -1,75 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
-<head>
-    <!-- Basic Page Needs
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <head>
+    <title>NodeJS Starter Application</title>
     <meta charset="utf-8">
-    <title>BlockVote</title>
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <!-- Mobile Specific Metas
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- FONT
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-    <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
-    <!-- CSS
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-    <link rel="stylesheet" href="css/normalize.css">
-    <link rel="stylesheet" href="css/skeleton.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/loading.css">
-    <!-- Favicon
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-    <!-- <link rel="icon" type="image/png" href="images/favicon.png"> -->
-</head>
+    <link rel="stylesheet" href="stylesheets/style.css">
+  </head>
 
-<body>
-    <!-- Primary Page Layout
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-    <!--  -->
-    <div class="container">
-        <div class="header">
-            <h1>BlockVote</h1>
-            <h8>Security, anonymity and verifiability in voting by using Blockchain tech.</h2>
-        </div>
-        <div class="ElectionSetup">
-            <div class="row">
-                <div class="six columns">
-                    <label for="availElections">Available Referendums and Elections</label>
-                    <select class="u-full-width" id="availElections">
-                        <option value="Brexit" selected>Referendum on UK's membership with EU</option>
-                        <option value="Laptop">Best Laptop Brand Election</option>
-                        <option value="Cuisine">Best Cuisine Election</option>
-                    </select>
-                </div>
-                <div class="six columns">
-                    <label for="BlockVoteoptions">Action</label>
-                    <select class="u-full-width" id="BlockVoteoptions">
-                        <option id="vote" value="Vote" selected>Vote</option>
-                        <option id="reviewVote" value="ReviewVote">Review Vote</option>
-                        <option id="reviewResults" value="ReviewResults">Review Results</option>
-                    </select>
-                </div>
-            </div>
-            <div style="text-align:center;">
-                <input id="setButton" class="button-primary" type="submit" value="Set">
-            </div>
-        </div>
-        <div class="optionCanvas">
-        </div>
-    </div>
-    <!-- End Document
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-</body>
-<script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
-<script>
-window.jQuery || document.write('<script src="js/vendor/jquery-1.12.0.min.js"><\/script>')
-</script>
-<!-- JQuery -->
-<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
-<!-- Application -->
-<script src="js/main.js"></script>
+  <body>
+    <table>
+      <tr>
+        <td style= "width:30%;">
+          <img class = "newappIcon" src="images/newapp-icon.png">
+        </td>
+        <td>
+          <h1 id="message">Hello World!</h1>
+          <p class='description'></p> Thanks for creating a <span class = "blue">NodeJS Starter Application</span>.
+        </td>
+      </tr>
+    </table>
+  </body>
 
 </html>
